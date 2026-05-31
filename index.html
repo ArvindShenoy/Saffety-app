@@ -45,6 +45,7 @@
 </div>
 
 <script>
+    // Paste your Google Web App deployment link here
     const googleScriptUrl = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
     
     let activeStream = null;
@@ -70,9 +71,10 @@
                 }
             }
             
+            // 🚀 FIX: Disabled audio tracking requirements to bypass the phone OS security freeze
             const constraints = {
                 video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
-                audio: true 
+                audio: false 
             };
             constraints.video.width = { ideal: 1280 }; 
             constraints.video.height = { ideal: 720 };
@@ -83,11 +85,11 @@
         } catch (err) {
             console.warn("Wide angle failed, trying standard fallback lens...");
             try {
-                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
+                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                 document.getElementById('video').srcObject = activeStream;
                 return true;
             } catch(e) { 
-                document.getElementById('status').innerText = "System Permissions Blocked! Check app camera permissions.";
+                document.getElementById('status').innerText = "System Permissions Blocked! Check phone browser settings.";
                 return false;
             }
         }
@@ -160,7 +162,9 @@
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
-            const base64Str = dataUrl.split(','); 
+            
+            // 🚀 FIX: Extracted raw text data parameters out of strings cleanly
+            const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
 
             const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
 
@@ -182,7 +186,7 @@
         if (!isBroadcasting) return;
         videoChunks = [];
         
-        let options = { mimeType: 'video/webm;codecs=vp8,opus' };
+        let options = { mimeType: 'video/webm;codecs=vp8' }; // Removed Opus audio parameters
         if (!MediaRecorder.isTypeSupported(options.mimeType)) {
             options = { mimeType: 'video/mp4' }; 
         }
@@ -200,7 +204,8 @@
                 const reader = new FileReader();
                 reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
-                    const base64Video = reader.result.split(','); 
+                    const rawResult = reader.result;
+                    const base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
                     const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
                     const payload = {
