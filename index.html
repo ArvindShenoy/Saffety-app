@@ -7,25 +7,11 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 20px; margin: 0; }
         .container { max-width: 400px; margin: 0 auto; }
-        
-        .square-btn { 
-            border: 4px solid #fff; 
-            border-radius: 0px !important;
-            font-size: 20px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            width: 220px; 
-            height: 220px; 
-            margin: 40px auto; 
-            color: white;
-            display: block;
-            transition: background-color 0.2s, transform 0.1s;
-        }
+        .square-btn { border: 4px solid #fff; border-radius: 0px !important; font-size: 20px; font-weight: bold; cursor: pointer; width: 220px; height: 220px; margin: 40px auto; color: white; display: block; transition: background-color 0.2s, transform 0.1s; }
         .btn-start { background-color: #dc3545; box-shadow: 0 0 20px rgba(220, 53, 69, 0.5); }
         .btn-start:active { transform: scale(0.97); background-color: #bd2130; }
         .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
         .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
-        
         #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
         video, canvas { display: none; }
     </style>
@@ -35,19 +21,15 @@
 <div class="container">
     <h2>Secure Safety Beacon Pro</h2>
     <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
-    
     <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
     <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
-    
     <div id="status">System Armed. Awaiting square button click...</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 </div>
 
 <script>
-    // Paste your Google Web App deployment link here
-    const googleScriptUrl = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
-    
+    const googleScriptUrl = "https://google.com"; 
     let activeStream = null;
     let packetRecorder = null;
     let videoChunks = [];
@@ -62,7 +44,6 @@
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             let selectedDeviceId = null;
-            
             for (let device of videoDevices) {
                 const label = device.label.toLowerCase();
                 if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
@@ -70,26 +51,22 @@
                     break;
                 }
             }
-            
-            // 🚀 FIX: Disabled audio tracking requirements to bypass the phone OS security freeze
             const constraints = {
                 video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
                 audio: false 
             };
             constraints.video.width = { ideal: 1280 }; 
             constraints.video.height = { ideal: 720 };
-
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
             document.getElementById('video').srcObject = activeStream;
             return true;
         } catch (err) {
-            console.warn("Wide angle failed, trying standard fallback lens...");
             try {
                 activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
                 document.getElementById('video').srcObject = activeStream;
                 return true;
             } catch(e) { 
-                document.getElementById('status').innerText = "System Permissions Blocked! Check phone browser settings.";
+                document.getElementById('status').innerText = "Optical Permissions Missing! Check phone browser privacy parameters.";
                 return false;
             }
         }
@@ -97,20 +74,16 @@
 
     async function startEmergencyBroadcast() {
         if(isBroadcasting) return;
-        
         const statusElement = document.getElementById('status');
-        statusElement.innerText = "Initializing optics and camera systems...";
+        statusElement.innerText = "Syncing network channels and optical targets...";
         statusElement.style.color = "#ffc107";
-
         const cameraReady = await selectWideAngleCamera();
         if (!cameraReady) return; 
-
         isBroadcasting = true;
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
         statusElement.innerText = "Broadcast active. Logging synchronization loops...";
         statusElement.style.color = "#dc3545";
-        
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 (pos) => {
@@ -122,12 +95,10 @@
                 { enableHighAccuracy: true }
             );
         }
-
         executePhotoCapture(); 
         photoInterval = setInterval(executePhotoCapture, 6000); 
-
         executeVideoIntervalBlock();
-        videoScheduleInterval = setInterval(executeVideoIntervalBlock, 60000);
+        videoScheduleInterval = setInterval(executeVideoIntervalBlock, 60000); 
     }
 
     function stopEmergencyBroadcast() {
@@ -135,15 +106,12 @@
         clearInterval(photoInterval);
         clearInterval(videoScheduleInterval);
         clearTimeout(videoDurationTimeout);
-        
         if (packetRecorder && packetRecorder.state === "recording") {
             packetRecorder.stop();
         }
-
         if (activeStream) {
             activeStream.getTracks().forEach(track => track.stop());
         }
-
         document.getElementById('startBtn').style.display = "block";
         document.getElementById('stopBtn').style.display = "none";
         document.getElementById('status').innerText = "Broadcast Closed. Monitoring Switched to Standby.";
@@ -155,19 +123,13 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-
         canvas.width = video.videoWidth || 1280;
         canvas.height = video.videoHeight || 720;
-
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
-            
-            // 🚀 FIX: Extracted raw text data parameters out of strings cleanly
             const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
-
             const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-
             const payload = {
                 type: "photo",
                 image: base64Str,
@@ -176,7 +138,6 @@
                 accuracy: gpsAccuracy,
                 timestamp: cleanTime
             };
-
             transmitPacketToCloud(payload);
             document.getElementById('status').innerText = "Uploaded: Photo [6s loop] at " + new Date().toLocaleTimeString();
         } catch (e) { console.error("Snapshot generation error: ", e); }
@@ -185,21 +146,17 @@
     function executeVideoIntervalBlock() {
         if (!isBroadcasting) return;
         videoChunks = [];
-        
-        let options = { mimeType: 'video/webm;codecs=vp8' }; // Removed Opus audio parameters
+        let options = { mimeType: 'video/webm;codecs=vp8' }; 
         if (!MediaRecorder.isTypeSupported(options.mimeType)) {
             options = { mimeType: 'video/mp4' }; 
         }
-
         try {
             packetRecorder = new MediaRecorder(activeStream, options);
             packetRecorder.ondataavailable = (e) => {
                 if (e.data && e.data.size > 0) videoChunks.push(e.data);
             };
-
             packetRecorder.onstop = () => {
                 if (videoChunks.length === 0) return;
-                
                 const videoBlob = new Blob(videoChunks, { type: options.mimeType });
                 const reader = new FileReader();
                 reader.readAsDataURL(videoBlob);
@@ -207,7 +164,6 @@
                     const rawResult = reader.result;
                     const base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
                     const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    
                     const payload = {
                         type: "video",
                         videoData: base64Video,
@@ -216,18 +172,14 @@
                         accuracy: gpsAccuracy,
                         timestamp: cleanTime
                     };
-                    
                     transmitPacketToCloud(payload);
                     document.getElementById('status').innerText = "Uploaded: 10s Video Block at " + new Date().toLocaleTimeString();
                 };
             };
-
             packetRecorder.start();
-            
             videoDurationTimeout = setTimeout(() => { 
                 if(packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); 
             }, 10000); 
-
         } catch (e) { console.error("Video pipeline initialization error: ", e); }
     }
 
@@ -240,6 +192,5 @@
         }).catch(err => console.error("Cloud transport error: ", err));
     }
 </script>
-
 </body>
 </html>
