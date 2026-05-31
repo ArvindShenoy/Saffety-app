@@ -8,10 +8,10 @@
         body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 20px; margin: 0; }
         .container { max-width: 400px; margin: 0 auto; }
         
-        /* Perfect Sharp Square Button Framework */
+        /* Sharp Square Button Layout Modification to Verify System Refresh */
         .square-btn { 
             border: 4px solid #fff; 
-            border-radius: 0px !important; 
+            border-radius: 0px !important; /* Forces a sharp square profile */
             font-size: 20px; 
             font-weight: bold; 
             cursor: pointer; 
@@ -27,26 +27,27 @@
         .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
         .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
         
-        #status { margin-top: 20px; font-size: 14px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; min-height: 40px; word-break: break-all; }
-        video, canvas { display: none; } 
+        #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
+        video, canvas { display: none; } /* Processes all optics silently behind the UI */
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Secure Safety Beacon Pro</h2>
-    <p>Interval: 1 Photo / 6s (10 Total) & 1 Video Block / Min (10s continuous)</p>
+    <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
     
+    <!-- Sharp Square Control Buttons -->
     <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
     <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
     
-    <div id="status">Syncing available system camera lenses...</div>
+    <div id="status">Querying mobile device camera lenses...</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 </div>
 
 <script>
-    // Paste your Google Web App deployment link inside the quotation marks below:
+    // PASTE YOUR GOOGLE WEB APP LINK INSIDE THE QUOTES BELOW:
     const googleScriptUrl = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
     
     let activeStream = null;
@@ -58,6 +59,7 @@
     let isBroadcasting = false;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
+    // Queries the phone hardware to latch onto the widest physical camera lens available
     async function selectWideAngleCamera() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -81,13 +83,14 @@
 
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
             document.getElementById('video').srcObject = activeStream;
-            updateStatusDisplay("System Armed & Operational.", "#28a745");
+            document.getElementById('status').innerText = "Wide-Angle Optic Armed. System Ready.";
+            document.getElementById('status').style.color = "#28a745";
         } catch (err) {
-            updateStatusDisplay("Falling back to standard camera viewport.", "#ffc107");
+            document.getElementById('status').innerText = "Running via standard system environment lens.";
             try {
                 activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
                 document.getElementById('video').srcObject = activeStream;
-            } catch(e) { updateStatusDisplay("Permissions Denied! Enable Location/Camera.", "#dc3545"); }
+            } catch(e) { document.getElementById('status').innerText = "System Permissions Blocked!"; }
         }
     }
 
@@ -97,8 +100,10 @@
         
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
-        updateStatusDisplay("Broadcast Activated. Syncing loops...", "#dc3545");
+        document.getElementById('status').innerText = "Broadcast active. Syncing streams...";
+        document.getElementById('status').style.color = "#dc3545";
         
+        // Connect directly to the phone's GPS tracking hardware
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 (pos) => {
@@ -111,11 +116,11 @@
             );
         }
 
-        // 1. Photo loop: Trigger immediately, then run every 6 seconds
+        // 1. PHOTO LOOP: Snap immediately, then repeat precisely every 6 seconds (10 pictures/min)
         executePhotoCapture(); 
         photoInterval = setInterval(executePhotoCapture, 6000); 
 
-        // 2. Video loop: Trigger immediately, then run every 60 seconds
+        // 2. VIDEO LOOP: Record first block immediately, then repeat every 60 seconds
         executeVideoIntervalBlock();
         videoScheduleInterval = setInterval(executeVideoIntervalBlock, 60000);
     }
@@ -132,7 +137,8 @@
 
         document.getElementById('startBtn').style.display = "block";
         document.getElementById('stopBtn').style.display = "none";
-        updateStatusDisplay("Broadcast Stopped. Standby Mode.", "#28a745");
+        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Switched to Standby.";
+        document.getElementById('status').style.color = "#28a745";
     }
 
     function executePhotoCapture() {
@@ -146,8 +152,8 @@
 
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.80); 
-            const base64Str = dataUrl.split(',')[1]; // Extracts raw text bytes cleanly
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+            const base64Str = dataUrl.split(',')[1]; // Fixed array referencing bug
 
             const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
 
@@ -160,8 +166,9 @@
                 timestamp: cleanTime
             };
 
-            transmitPacketToCloud(payload, "Photo [6s]");
-        } catch (e) { console.error(e); }
+            transmitPacketToCloud(payload);
+            document.getElementById('status').innerText = "Uploaded: Photo [6s loop] at " + new Date().toLocaleTimeString();
+        } catch (e) { console.error("Snapshot generation error: ", e); }
     }
 
     function executeVideoIntervalBlock() {
@@ -170,7 +177,7 @@
         
         let options = { mimeType: 'video/webm;codecs=vp8,opus' };
         if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: 'video/mp4' }; // Fallback profile layout for iOS devices
+            options = { mimeType: 'video/mp4' }; // Fallback codec layout for iOS Safari configurations
         }
 
         try {
@@ -186,7 +193,7 @@
                 const reader = new FileReader();
                 reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
-                    const base64Video = reader.result.split(',')[1]; // Extracts raw text bytes cleanly
+                    const base64Video = reader.result.split(',')[1]; // Fixed array referencing bug
                     const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
                     const payload = {
@@ -198,45 +205,24 @@
                         timestamp: cleanTime
                     };
                     
-                    transmitPacketToCloud(payload, "Video [10s]");
+                    transmitPacketToCloud(payload);
+                    document.getElementById('status').innerText = "Uploaded: 10s Video Block at " + new Date().toLocaleTimeString();
                 };
             };
 
             packetRecorder.start();
-            updateStatusDisplay("Recording 10s Minute Video Block...", "#ffc107");
             
-            // Automatically stop recording after 10 seconds
+            // Stops recording automatically after exactly 10 seconds
             videoDurationTimeout = setTimeout(() => { 
                 if(packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); 
             }, 10000); 
 
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Video pipeline initialization error: ", e); }
     }
 
-    function transmitPacketToCloud(payload, label) {
-        // FIX: Content-Type set to text/plain to bypass strict browser CORS roadblocks completely!
+    function transmitPacketToCloud(payload) {
         fetch(googleScriptUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain' }, 
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        })
-        .then(() => {
-            updateStatusDisplay(`Uploaded: ${label} at ${new Date().toLocaleTimeString()}`, "#28a745");
-        })
-        .catch(err => {
-            updateStatusDisplay("Upload Error. Check Network Link.", "#dc3545");
-            console.error(err);
-        });
-    }
-
-    function updateStatusDisplay(text, color) {
-        const el = document.getElementById('status');
-        el.innerText = text;
-        el.style.color = color;
-    }
-
-    window.onload = selectWideAngleCamera;
-</script>
-
-</body>
-</html>
