@@ -7,45 +7,65 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 20px; margin: 0; }
         .container { max-width: 400px; margin: 0 auto; }
-        .sos-btn { background-color: #dc3545; color: white; border: none; border-radius: 50%; width: 200px; height: 200px; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 0 20px rgba(220, 53, 69, 0.6); margin: 40px 0; }
-        .sos-btn:active { transform: scale(0.95); background-color: #bd2130; }
-        #status { margin-top: 20px; font-size: 16px; color: #ffc107; }
-        video, canvas { display: none; } /* Operates entirely in the background */
+        
+        /* 🟩 REFRESH ANCHOR: Square Button Layout Modification */
+        .square-btn { 
+            border: 4px solid #fff; 
+            border-radius: 0px !important; /* Forces a perfect sharp square profile shape */
+            font-size: 20px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            width: 220px; 
+            height: 220px; 
+            margin: 40px auto; 
+            color: white;
+            display: block;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .btn-start { background-color: #dc3545; box-shadow: 0 0 20px rgba(220, 53, 69, 0.5); }
+        .btn-start:active { transform: scale(0.97); background-color: #bd2130; }
+        .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
+        .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
+        
+        #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
+        video, canvas { display: none; } /* Processes all optics silently behind the UI */
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>Secure Safety Beacon Pro</h2>
-    <p>Pulsing HQ Wide-Angle Images (10s) & Continuous Video Packets (30s)</p>
+    <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
     
-    <button class="sos-btn" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
+    <!-- Sharp Square Control Buttons to Verify System Refresh -->
+    <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
+    <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
     
-    <div id="status">Scanning Available Phone Lens Frameworks...</div>
+    <div id="status">Querying mobile device camera lenses...</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 </div>
 
 <script>
-    // Paste your Google Web App deployment link here
-    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
+    // Paste your real Google Script Web App link inside the quotation marks below:
+    const googleScriptUrl = "YOUR_GOOGLE_SCRIPT_URL_HERE"; 
     
     let activeStream = null;
     let packetRecorder = null;
     let videoChunks = [];
-    let loopInterval = null;
+    let photoInterval = null;
+    let videoScheduleInterval = null;
+    let videoDurationTimeout = null;
     let isBroadcasting = false;
-    let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "N/A";
+    let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
-    // 1. HARDWARE LENS CHECK: Forces selection of the widest back-facing camera profile
+    // Queries the phone hardware to latch onto the widest physical camera lens available
     async function selectWideAngleCamera() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            
             let selectedDeviceId = null;
             
-            // Search for typical wide/ultra-wide lens naming markers used by Android/iOS
             for (let device of videoDevices) {
                 const label = device.label.toLowerCase();
                 if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
@@ -54,135 +74,159 @@
                 }
             }
             
-            // Fallback to standard environment camera if distinct labels aren't reported by OS
             const constraints = {
-                video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: { exact: "environment" } },
-                audio: true // Captures environmental audio along with the safety video
+                video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
+                audio: true 
             };
-
-            // Request maximum resolution definitions from the selected lens hardware
-            constraints.video.width = { ideal: 3840, max: 3840 }; 
-            constraints.video.height = { ideal: 2160, max: 2160 };
+            constraints.video.width = { ideal: 1920 }; 
+            constraints.video.height = { ideal: 1080 };
 
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
             document.getElementById('video').srcObject = activeStream;
-            document.getElementById('status').innerText = "Wide-Angle Lens Locked. System Armed.";
+            document.getElementById('status').innerText = "Wide-Angle Optic Armed. System Ready.";
             document.getElementById('status').style.color = "#28a745";
         } catch (err) {
-            document.getElementById('status').innerText = "Camera Configuration Error. Retrying standard view...";
-            // Safe fallback attempt to standard back camera
+            document.getElementById('status').innerText = "Running via standard system environment lens.";
             try {
                 activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
                 document.getElementById('video').srcObject = activeStream;
-            } catch(e) { document.getElementById('status').innerText = "Permissions Missing!"; }
+            } catch(e) { document.getElementById('status').innerText = "System Permissions Blocked!"; }
         }
     }
 
-    // 2. MAIN TRACKING TRIGGERS
     function startEmergencyBroadcast() {
         if(isBroadcasting) return;
         isBroadcasting = true;
-        document.getElementById('status').innerText = "Emergency Broadcast Active. Transmitting logs...";
         
-        // Boot continuous GPS satellite tracking loop
+        document.getElementById('startBtn').style.display = "none";
+        document.getElementById('stopBtn').style.display = "block";
+        document.getElementById('status').innerText = "Broadcast active. Logging synchronization loops...";
+        document.getElementById('status').style.color = "#dc3545";
+        
+        // Connect directly to the phone's GPS tracking hardware
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 (pos) => {
-                    currentLat = pos.coords.latitude;
-                    currentLon = pos.coords.longitude;
-                    gpsAccuracy = pos.coords.accuracy;
+                    currentLat = pos.coords.latitude.toFixed(5);
+                    currentLon = pos.coords.longitude.toFixed(5);
+                    gpsAccuracy = Math.round(pos.coords.accuracy);
                 }, 
                 null, 
                 { enableHighAccuracy: true }
             );
         }
 
-        // Trigger loop #1: High-Quality Stills captured every 10 seconds
+        // 1. PHOTO SCHEDULE: Snap immediately, then repeat precisely every 6 seconds
         executePhotoCapture(); 
-        loopInterval = setInterval(executePhotoCapture, 10000);
+        photoInterval = setInterval(executePhotoCapture, 6000); 
 
-        // Trigger loop #2: Continuous Video Packets streaming every 30 seconds
-        startVideoPacketPipeline();
+        // 2. VIDEO SCHEDULE: Record first block immediately, then schedule every 60 seconds
+        executeVideoIntervalBlock();
+        videoScheduleInterval = setInterval(executeVideoIntervalBlock, 60000);
     }
 
-    // 3. HIGH QUALITY PHOTO EXTRACTION (10 Second Interval)
+    function stopEmergencyBroadcast() {
+        isBroadcasting = false;
+        clearInterval(photoInterval);
+        clearInterval(videoScheduleInterval);
+        clearTimeout(videoDurationTimeout);
+        
+        if (packetRecorder && packetRecorder.state === "recording") {
+            packetRecorder.stop();
+        }
+
+        document.getElementById('startBtn').style.display = "block";
+        document.getElementById('stopBtn').style.display = "none";
+        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Switched to Standby.";
+        document.getElementById('status').style.color = "#28a745";
+    }
+
     function executePhotoCapture() {
+        if (!isBroadcasting) return;
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
-        // Dynamically scale canvas to match maximum hardware sensor dimensions
-        canvas.width = video.videoWidth || 1920;
-        canvas.height = video.videoHeight || 1080;
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
 
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Compress canvas frame to max-quality JPEG string format
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95); 
-        const base64Str = dataUrl.split(',')[1];
-        
-        const payload = {
-            type: "photo",
-            image: base64Str,
-            latitude: currentLat.toString(),
-            longitude: currentLon.toString(),
-            accuracy: gpsAccuracy.toString(),
-            timestamp: new Date().toISOString()
-        };
+        try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+            const base64Str = dataUrl.split(',')[1]; // Fixed: Clean string isolation to prevent script crashes
 
-        transmitPacket(payload);
-    }
+            const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
 
-    // 4. PACKET VIDEO RECORDING ENGINE (30 Second Interval)
-    function startVideoPacketPipeline() {
-        // Set up the MediaRecorder to use a mobile-friendly compression standard
-        packetRecorder = new MediaRecorder(activeStream, { mimeType: 'video/webm;codecs=vp8,opus' });
-        
-        packetRecorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) videoChunks.push(e.data);
-        };
-
-        packetRecorder.onstop = async () => {
-            const videoBlob = new Blob(videoChunks, { type: 'video/webm' });
-            videoChunks = []; // Flush buffer instantly for the next packet loop
-            
-            // Convert binary video array into a base64 transit string
-            const reader = new FileReader();
-            reader.readAsDataURL(videoBlob);
-            reader.onloadend = () => {
-                const base64Video = reader.result.split(',')[1];
-                const payload = {
-                    type: "video",
-                    videoData: base64Video,
-                    timestamp: new Date().toISOString()
-                };
-                transmitPacket(payload);
-                
-                // Immediately spin up the next recording window if alert mode remains active
-                if (isBroadcasting) {
-                    packetRecorder.start();
-                    setTimeout(() => { if(packetRecorder.state === "recording") packetRecorder.stop(); }, 30000);
-                }
+            const payload = {
+                type: "photo",
+                image: base64Str,
+                latitude: currentLat,
+                longitude: currentLon,
+                accuracy: gpsAccuracy,
+                timestamp: cleanTime
             };
-        };
 
-        // Start first 30-second video capture frame sequence
-        packetRecorder.start();
-        setTimeout(() => { if(packetRecorder.state === "recording") packetRecorder.stop(); }, 30000);
+            transmitPacketToCloud(payload);
+        } catch (e) { console.error("Snapshot generation error: ", e); }
     }
 
-    // 5. ASYNCHRONOUS SECURE TRANSMISSION
-    function transmitPacket(payload) {
+    function executeVideoIntervalBlock() {
+        if (!isBroadcasting) return;
+        videoChunks = [];
+        
+        let options = { mimeType: 'video/webm;codecs=vp8,opus' };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: 'video/mp4' }; // Fallback codec configuration map for iOS Safari browsers
+        }
+
+        try {
+            packetRecorder = new MediaRecorder(activeStream, options);
+            packetRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) videoChunks.push(e.data);
+            };
+
+            packetRecorder.onstop = () => {
+                if (videoChunks.length === 0) return;
+                
+                const videoBlob = new Blob(videoChunks, { type: options.mimeType });
+                const reader = new FileReader();
+                reader.readAsDataURL(videoBlob);
+                reader.onloadend = () => {
+                    const base64Video = reader.result.split(',')[1]; // Fixed: Isolated pure code blocks cleanly
+                    const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+                    
+                    const payload = {
+                        type: "video",
+                        videoData: base64Video,
+                        latitude: currentLat,
+                        longitude: currentLon,
+                        accuracy: gpsAccuracy,
+                        timestamp: cleanTime
+                    };
+                    
+                    transmitPacketToCloud(payload);
+                };
+            };
+
+            packetRecorder.start();
+            
+            // ⏳ TIMING BLOCK: Automatically stops recording after exactly 10 seconds (10000ms)
+            videoDurationTimeout = setTimeout(() => { 
+                if(packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); 
+            }, 10000); 
+
+        } catch (e) { console.error("Video pipeline initialization error: ", e); }
+    }
+
+    function transmitPacketToCloud(payload) {
         fetch(googleScriptUrl, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).catch(err => console.log("Transmission error across backup route: ", err));
+        }).catch(err => console.error("Cloud transport pipeline error: ", err));
     }
 
     window.onload = selectWideAngleCamera;
 </script>
 
-</body>
-</html>
