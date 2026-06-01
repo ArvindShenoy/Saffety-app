@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOS Safety Beacon Pro</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0d0d0d; color: #f5f5f5; text-align: center; margin: 0; padding: 20px; }
@@ -66,7 +67,8 @@
     </div>
 </div>
 <script>
-    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
+    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec" + 
+        "AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
     let activeStream = null, audioStream = null, combinedRecorder = null, continuousAudioRecorder = null;
     let videoChunks = [], fullAudioChunks = [], isBroadcasting = false, db = null, wakeLock = null;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
@@ -137,7 +139,6 @@
         runContinuousAudioLoop(); 
         runCombinedVideoLoop(); 
     }
-
     function runBackgroundPhotoLoop() { if (!isBroadcasting) return; executePhotoCapture(); setTimeout(runBackgroundPhotoLoop, 6000); }
     function runContinuousAudioLoop() { if (!isBroadcasting) return; executeContinuousAudioBlock(); setTimeout(runContinuousAudioLoop, 60000); }
     function runCombinedVideoLoop() { if (!isBroadcasting) return; executeCombinedVideoBlock(); setTimeout(runCombinedVideoLoop, 60000); }
@@ -160,7 +161,15 @@
             let dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
             let base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
             let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-            transmitPacketToCloud({ type: "photo", image: base64Str, latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime });
+            
+            transmitPacketToCloud({ 
+                type: "photo", 
+                image: base64Str, 
+                LAT: currentLat, 
+                LON: currentLon, 
+                accuracy: gpsAccuracy, 
+                timestamp: cleanTime 
+            });
             saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "Lt[" + currentLat + "] Lg[" + currentLon + "] ac[" + gpsAccuracy + "m]");
         } catch (e) {}
     }
@@ -178,7 +187,15 @@
                 const reader = new FileReader(); reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime });
+                    
+                    transmitPacketToCloud({ 
+                        type: "video", 
+                        videoData: reader.result.substring(reader.result.indexOf(',') + 1), 
+                        LAT: currentLat, 
+                        LON: currentLon, 
+                        accuracy: gpsAccuracy, 
+                        timestamp: cleanTime 
+                    });
                     saveToDecoyLocalVault("Vid_" + cleanTime + ".mp4", "10s Combined AV Video Captured");
                 };
             };
@@ -199,7 +216,15 @@
                 const reader = new FileReader(); reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime + "_FullMinuteAUDIO" });
+                    
+                    transmitPacketToCloud({ 
+                        type: "video", 
+                        videoData: reader.result.substring(reader.result.indexOf(',') + 1), 
+                        LAT: currentLat, 
+                        LON: currentLon, 
+                        accuracy: gpsAccuracy, 
+                        timestamp: cleanTime + "_FullMinuteAUDIO" 
+                    });
                     saveToDecoyLocalVault("Audio_" + cleanTime + ".mp3", "Continuous 1-Min Audio Track Captured");
                 };
             };
