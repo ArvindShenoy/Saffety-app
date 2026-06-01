@@ -35,7 +35,7 @@
             top: 10px;
         }
         #status { margin-top: 30px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
-        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
+        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; }
         canvas { display: none; }
         .vault { margin-top: 30px; border-top: 1px dashed #2b2b2b; padding-top: 20px; display: none; }
         h4 { font-size: 13px; color: #999; margin: 0 0 10px 0; text-align: left; font-weight: 500; }
@@ -123,7 +123,7 @@
         }
         isBroadcasting = true;
         document.getElementById('decoyVault').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Tracking telemetry streams...";
+        document.getElementById('status').innerText = "Broadcast active. Tracking streams... Display safe to lock.";
         document.getElementById('status').style.color = "#e63946";
         
         if (navigator.geolocation) {
@@ -185,7 +185,6 @@
                 const reader = new FileReader(); reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
                     let rawResult = reader.result;
-                    // ✅ FIXED STRING ISOLATOR: Points cleanly to rawResult instead of unmapped variables
                     let base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
@@ -217,7 +216,6 @@
                 const reader = new FileReader(); reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     let rawResult = reader.result;
-                    // ✅ FIXED STRING ISOLATOR: Points cleanly to rawResult instead of unmapped variables
                     let base64Audio = rawResult.substring(rawResult.indexOf(',') + 1); 
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
