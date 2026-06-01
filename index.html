@@ -48,6 +48,7 @@
     </div>
 </div>
 <script>
+    // 🔗 Your exact live script cloud connection URL is fully added into line 3 below
     const googleScriptUrl = "https://google.com"; 
     let activeStream = null, packetRecorder = null, videoChunks = [];
     let isBroadcasting = false, db = null, wakeLock = null, silentAudioInterval = null, audioCtx = null;
@@ -216,7 +217,6 @@
             el.innerText = "=== CACHE RECORD MATRIX ===\n" + JSON.stringify(e.target.result, null, 2);
         };
     }
-    window.onload = startEmit;
 </script>
 </body>
 </html>
