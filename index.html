@@ -1,282 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOS Advanced Safety Beacon</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOS Safety Beacon Pro</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 20px; margin: 0; }
-        .container { max-width: 400px; margin: 0 auto; }
-        .square-btn { border: 4px solid #fff; border-radius: 0px !important; font-size: 20px; font-weight: bold; cursor: pointer; width: 220px; height: 220px; margin: 40px auto; color: white; display: block; transition: background-color 0.2s, transform 0.1s; }
-        .btn-start { background-color: #dc3545; box-shadow: 0 0 20px rgba(220, 53, 69, 0.5); }
-        .btn-start:active { transform: scale(0.97); background-color: #bd2130; }
-        .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
-        .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
-        #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
-        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0d0d0d; color: #f5f5f5; text-align: center; margin: 0; padding: 20px; }
+        .box { max-width: 380px; margin: 0 auto; background: #141414; padding: 25px 20px; border-radius: 16px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
+        h2 { font-size: 22px; font-weight: 600; margin: 0 0 5px 0; letter-spacing: -0.5px; }
+        .subtitle { font-size: 12px; color: #777; margin: 0 0 25px 0; }
+        .sq-btn { border: 2px solid #fff; font-size: 18px; font-weight: 700; cursor: pointer; width: 180px; height: 180px; margin: 20px auto; color: #fff; display: block; transition: all 0.2s ease; letter-spacing: 0.5px; }
+        .start { background: #e63946; box-shadow: 0 0 25px rgba(230,57,70,0.4); border-color: #ff4d5a; }
+        .start:active { transform: scale(0.96); background: #cc2e3a; }
+        .stop { background: #1d3557; box-shadow: 0 0 25px rgba(29,53,87,0.4); border-color: #2a4b7c; display: none; }
+        .stop:active { transform: scale(0.96); background: #132239; }
+        #status { margin-top: 20px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
+        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
         canvas { display: none; }
-        .decoy-vault { margin-top: 30px; border-top: 1px dashed #444; padding-top: 20px; display: none; }
-        .file-list { text-align: left; background: #1a1a1a; padding: 10px; border-radius: 4px; font-size: 12px; font-family: monospace; max-height: 150px; overflow-y: auto; color: #ff3b30; }
-        .delete-btn { background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; cursor: pointer; margin: 5px; font-size: 12px; }
-        .view-db-btn { background: #222; color: #28a745; border: 1px solid #28a745; }
-        .db-dump-box { background: #000; color: #00ff00; padding: 10px; text-align: left; font-size: 11px; font-family: monospace; white-space: pre-wrap; display: none; border-radius: 4px; border: 1px solid #28a745; margin-top: 10px; }
+        .vault { margin-top: 30px; border-top: 1px dashed #2b2b2b; padding-top: 20px; display: none; }
+        h4 { font-size: 13px; color: #999; margin: 0 0 10px 0; text-align: left; font-weight: 500; }
+        .f-list { text-align: left; background: #0a0a0a; padding: 12px; border-radius: 6px; font-size: 11px; max-height: 110px; overflow-y: auto; color: #a8dadc; font-family: monospace; border: 1px solid #1a1a1a; }
+        .f-list div { padding: 3px 0; border-bottom: 1px solid #111; }
+        .ctrl-panel { margin-top: 15px; text-align: right; }
+        .v-btn { background: transparent; color: #555; border: none; padding: 4px 8px; cursor: pointer; font-size: 11px; transition: color 0.2s; }
+        .v-btn:hover { color: #888; }
+        .db-btn { color: #2a7b4c; }
+        .db-btn:hover { color: #3aa667; }
+        #dbDump { background: #050505; color: #39ff14; padding: 10px; text-align: left; font-size: 10px; font-family: monospace; white-space: pre-wrap; display: none; border: 1px solid #222; border-radius: 6px; margin-top: 10px; max-height: 120px; overflow-y: auto; }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2>Secure Safety Beacon Pro</h2>
-    <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
-    <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
-    <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
-    <div id="status">Querying mobile device camera lenses...</div>
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
-    <div id="decoyVault" class="decoy-vault">
-        <h3>📂 Local Device Evidence Folder (Encrypted)</h3>
-        <p style="font-size:12px; color:#aaa;">Attacker Notice: Deleting local logs wipes data cache permanently.</p>
-        <div id="fileList" class="file-list">No local files stored yet.</div>
-        <button class="delete-btn" onclick="wipeLocalDecoyCache()">⚠️ CLEAR LOCAL FILES PERMANENTLY</button>
-        <button class="delete-btn view-db-btn" onclick="inspectMobileDatabase()">🔍 VIEW RAW SQL/DB ROWS</button>
-        <div id="dbDump" class="db-dump-box"></div>
+<div class="box">
+    <h2>Safety Beacon Pro</h2>
+    <div class="subtitle">Loop Tracking Active Framework</div>
+    <button id="startBtn" class="sq-btn start" onclick="startEmit()">🚨 INITIATE<br>BROADCAST</button>
+    <button id="stopBtn" class="sq-btn stop" onclick="stopEmit()">⏹️ STOP<br>BROADCAST</button>
+    <div id="status">System armed and ready for transmission...</div>
+    <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
+    <div id="decoyVault" class="vault">
+        <h4>📂 Storage Sandbox</h4>
+        <div id="fileList" class="f-list">No local entries tracked yet.</div>
+        <div class="ctrl-panel">
+            <button class="v-btn db-btn" onclick="viewLocal()">inspect data rows</button>
+            <button class="v-btn" onclick="wipeLocal()">clear cache</button>
+        </div>
+        <div id="dbDump"></div>
     </div>
 </div>
 <script>
-    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
-    let activeStream = null;
-    let packetRecorder = null;
-    let videoChunks = [];
-    let isBroadcasting = false;
-    let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
-    let wakeLock = null;
-    let silentAudioInterval = null;
-    let audioCtx = null;
-    let db = null;
+    // 🔗 Your exact live Apps Script URL is hardcoded into the line string below
+    const url = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
+    let stream = null, recorder = null, chunks = [], isRun = false, db = null, wake = null, audLoop = null, aCtx = null;
+    let lat = "Unknown", lon = "Unknown", acc = "0";
 
-    const request = indexedDB.open("LocalDecoyVault", 1);
-    request.onupgradeneeded = (e) => {
-        db = e.target.result;
-        db.createObjectStore("files", { keyPath: "id" });
-    };
-    request.onsuccess = (e) => db = e.target.result;
+    const req = indexedDB.open("LocalDecoyVault", 1);
+    req.onupgradeneeded = (e) => e.target.result.createObjectStore("files", { keyPath: "id" });
+    req.onsuccess = (e) => db = e.target.result;
 
-    async function activateBackgroundBypass() {
+    async function wakeLockAndAudioBypass() {
+        try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch(e){}
         try {
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-            }
-        } catch (err) { console.warn("WakeLock rejected: ", err); }
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            silentAudioInterval = setInterval(() => {
-                if (!isBroadcasting) return;
-                let osc = audioCtx.createOscillator();
-                let gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(1, audioCtx.currentTime); 
-                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+            aCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audLoop = setInterval(() => {
+                if (!isRun) return;
+                let osc = aCtx.createOscillator(), g = aCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1, aCtx.currentTime); 
+                g.gain.setValueAtTime(0.001, aCtx.currentTime);
+                osc.connect(g); g.connect(aCtx.destination);
+                osc.start(); osc.stop(aCtx.currentTime + 0.1);
             }, 1000);
-        } catch(e) { console.error(e); }
+        } catch(e){}
     }
 
-    async function selectWideAngleCamera() {
+    async function getCam() {
         try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(d => d.kind === 'videoinput');
-            let selectedDeviceId = null;
-            for (let device of videoDevices) {
-                const label = device.label.toLowerCase();
-                if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
-                    selectedDeviceId = device.deviceId;
-                    break;
-                }
-            }
-            const constraints = {
-                video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
-                audio: false 
-            };
-            constraints.video.width = { ideal: 640 }; 
-            constraints.video.height = { ideal: 480 };
-            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-            const videoElement = document.getElementById('video');
-            videoElement.srcObject = activeStream;
-            await videoElement.play();
+            const devs = await navigator.mediaDevices.enumerateDevices();
+            let wId = devs.find(d => d.kind === 'videoinput' && (d.label.toLowerCase().includes('wide') || d.label.toLowerCase().includes('0.5x')))? .deviceId;
+            stream = await navigator.mediaDevices.getUserMedia({ video: wId ? { deviceId: { exact: wId } } : { facingMode: "environment" }, audio: false });
+            document.getElementById('video').srcObject = stream;
             return true;
-        } catch (err) {
-            try {
-                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 640, height: 480 }, audio: false });
-                const videoElement = document.getElementById('video');
-                videoElement.srcObject = activeStream;
-                await videoElement.play();
-                return true;
-            } catch(e) { 
-                document.getElementById('status').innerText = "System Permissions Blocked!"; 
-                return false;
-            }
-        }
+        } catch(e) { document.getElementById('status').innerText = "Camera Access Blocked!"; return false; }
     }
-    async function startEmergencyBroadcast() {
-        if(isBroadcasting) return;
-        document.getElementById('status').innerText = "Waking background tracking matrix...";
-        const cameraReady = await selectWideAngleCamera();
-        if (!cameraReady) return;
-        await activateBackgroundBypass();
-        isBroadcasting = true;
+
+    async function startEmit() {
+        if(isRun || !(await getCam())) return;
+        isRun = true; await wakeLockAndAudioBypass();
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
         document.getElementById('decoyVault').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Standby mode safe.";
-        document.getElementById('status').style.color = "#dc3545";
+        document.getElementById('status').innerText = "Broadcast active. System tracking background processes...";
+        document.getElementById('status').style.color = "#e63946";
+        
         if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    currentLat = pos.coords.latitude.toFixed(5);
-                    currentLon = pos.coords.longitude.toFixed(5);
-                    gpsAccuracy = Math.round(pos.coords.accuracy);
-                }, 
-                null, 
-                { enableHighAccuracy: true }
-            );
+            navigator.geolocation.watchPosition((p) => { lat = p.coords.latitude.toFixed(5); lon = p.coords.longitude.toFixed(5); acc = Math.round(p.coords.accuracy); }, null, { enableHighAccuracy: true });
         }
-        runBackgroundPhotoLoop();
-        runBackgroundVideoLoop();
+        loopPhoto(); loopVideo();
     }
 
-    function runBackgroundPhotoLoop() {
-        if (!isBroadcasting) return;
-        executePhotoCapture();
-        setTimeout(runBackgroundPhotoLoop, 6000); 
-    }
+    function loopPhoto() { if (!isRun) return; snapPhoto(); setTimeout(loopPhoto, 6000); }
+    function loopVideo() { if (!isRun) return; snapVideo(); setTimeout(loopVideo, 60000); }
 
-    function runBackgroundVideoLoop() {
-        if (!isBroadcasting) return;
-        executeVideoIntervalBlock();
-        setTimeout(runBackgroundVideoLoop, 60000); 
-    }
-
-    function stopEmergencyBroadcast() {
-        isBroadcasting = false;
-        clearInterval(silentAudioInterval);
-        if (wakeLock) { wakeLock.release(); wakeLock = null; }
-        if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop();
-        if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null; }
+    function stopEmit() {
+        isRun = false; clearInterval(audLoop); if (wake) wake.release();
+        if (recorder && recorder.state === "recording") recorder.stop();
+        if (stream) stream.getTracks().forEach(t => t.stop());
         document.getElementById('startBtn').style.display = "block";
         document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('status').innerText = "Broadcast Closed. Standby Active.";
+        document.getElementById('status').innerText = "Broadcast Terminated. Standby.";
         document.getElementById('status').style.color = "#28a745";
     }
 
-    function executePhotoCapture() {
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 640;
-        canvas.height = 480;
+    function snapPhoto() {
+        const v = document.getElementById('video'), c = document.getElementById('canvas'), ctx = c.getContext('2d');
+        c.width = 640; c.height = 480;
         try {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
-            const idx = dataUrl.indexOf(',') + 1;
-            const base64Str = dataUrl.substring(idx); 
-            const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-            const payload = {
-                type: "photo",
-                image: base64Str,
-                latitude: currentLat,
-                longitude: currentLon,
-                accuracy: gpsAccuracy,
-                timestamp: cleanTime
-            };
-            transmitPacketToCloud(payload);
-            saveToDecoyLocalVault(cleanTime + ".jpg", "Photo Frame (" + gpsAccuracy + "m accuracy)");
-        } catch (e) { console.error(e); }
+            ctx.drawImage(v, 0, 0, 640, 480);
+            let str = c.toDataURL('image/jpeg', 0.6).split(',');
+            let t = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+            postCloud({ type: "photo", image: str[1], latitude: lat, longitude: lon, accuracy: acc, timestamp: t });
+            logLocal("Photo_" + t + ".jpg", "Lt[" + lat + "] Lg[" + lon + "] ac[" + acc + "m]");
+        } catch(e){}
     }
 
-    function executeVideoIntervalBlock() {
-        videoChunks = [];
-        let options = { mimeType: 'video/webm;codecs=vp8' };
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) { options = { mimeType: 'video/mp4' }; }
+    function snapVideo() {
+        chunks = []; 
+        let opt = { mimeType: 'video/mp4;codecs=avc1' };
+        if (!MediaRecorder.isTypeSupported(opt.mimeType)) {
+            opt = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/mp4' };
+        }
         try {
-            packetRecorder = new MediaRecorder(activeStream, options);
-            packetRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
-            packetRecorder.onstop = () => {
-                if (videoChunks.length === 0) return;
-                const videoBlob = new Blob(videoChunks, { type: options.mimeType });
-                const reader = new FileReader();
-                reader.readAsDataURL(videoBlob);
-                reader.onloadend = () => {
-                    const rawResult = reader.result;
-                    const vIdx = rawResult.indexOf(',') + 1;
-                    const base64Video = rawResult.substring(vIdx); 
-                    const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    const payload = {
-                        type: "video",
-                        videoData: base64Video,
-                        latitude: currentLat,
-                        longitude: currentLon,
-                        accuracy: gpsAccuracy,
-                        timestamp: cleanTime
-                    };
-                    transmitPacketToCloud(payload);
-                    saveToDecoyLocalVault(cleanTime + ".webm", "10-Second Continuous Video Block");
+            recorder = new MediaRecorder(stream, opt);
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+            recorder.onstop = () => {
+                let r = new FileReader(); r.readAsDataURL(new Blob(chunks, { type: opt.mimeType }));
+                r.onloadend = () => {
+                    let t = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+                    postCloud({ type: "video", videoData: r.result.split(',')[1], latitude: lat, longitude: lon, accuracy: acc, timestamp: t });
+                    logLocal("Vid_" + t + ".mp4", "Lt[" + lat + "] Lg[" + lon + "] ac[" + acc + "m]");
                 };
             };
-            packetRecorder.start();
-            setTimeout(() => { if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); }, 10000); 
-        } catch (e) { console.error("Video recording setup error: ", e); }
+            recorder.start(); setTimeout(() => { if (recorder.state === "recording") recorder.stop(); }, 10000);
+        } catch(e){}
     }
 
-    function transmitPacketToCloud(payload) {
-        fetch(googleScriptUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).catch(err => console.error("Background network error: ", err));
-    }
+    function postCloud(p) { fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) }).catch(e=>{}); }
 
-    function saveToDecoyLocalVault(filename, details) {
+    function logLocal(f, d) {
         if (!db) return;
         const tx = db.transaction("files", "readwrite");
-        const store = tx.objectStore("files");
-        store.put({ id: filename, details: details, time: new Date().toLocaleTimeString() });
+        tx.objectStore("files").put({ id: f, details: d, time: new Date().toLocaleTimeString() });
         tx.oncomplete = () => {
-            const listDiv = document.getElementById("fileList");
-            if (listDiv.innerText.includes("No local files")) listDiv.innerHTML = "";
-            listDiv.innerHTML += "<div>📁 " + filename + " -> " + details + " [SAVED LOCAL]</div>";
+            let div = document.getElementById("fileList"); if (div.innerText.includes("No local")) div.innerHTML = "";
+            div.innerHTML += "<div>📄 " + f + " -> " + d + "</div>";
         };
     }
 
-    // Completely isolated wipe functions
-    function wipeLocalDecoyCache() {
+    function wipeLocal() {
         if (!db) return;
-        const tx = db.transaction("files", "readwrite");
-        tx.objectStore("files").clear();
-        tx.oncomplete = () => {
-            document.getElementById("fileList").innerHTML = "<div style='color:#28a745;'>❌ ALL LOCAL FILES WIPED PERMANENTLY from device storage.</div>";
-            alert("Local logs deleted! (Note: Secure cloud backups remain safe inside Google Drive).");
+        db.transaction("files", "readwrite").objectStore("files").clear().oncomplete = () => {
+            document.getElementById("fileList").innerHTML = "<div>Cache data wiped clean.</div>";
+            document.getElementById("dbDump").style.display = "none";
         };
     }
 
-    function inspectMobileDatabase() {
-        if (!db) { alert("Database connection not ready yet."); return; }
-        const tx = db.transaction("files", "readonly");
-        const store = tx.objectStore("files");
-        const getAll = store.getAll();
-        getAll.onsuccess = () => {
-            const dumpBox = document.getElementById("dbDump");
-            if (dumpBox.style.display === "block") {
-                dumpBox.style.display = "none";
-            } else {
-                dumpBox.style.display = "block";
-                var str = JSON.stringify(getAll.result, null, 2);
-                dumpBox.innerText = "=== DATABASE RAW INSPECTION LOGS ===\n" + str;
-            }
+    function viewLocal() {
+        if (!db) return;
+        db.transaction("files", "readonly").objectStore("files").getAll().onsuccess = (e) => {
+            let el = document.getElementById("dbDump");
+            el.style.display = el.style.display === "block" ? "none" : "block";
+            el.innerText = "=== CACHE RECORD MATRIX ===\n" + JSON.stringify(e.target.result, null, 2);
         };
     }
-    window.onload = selectWideAngleCamera;
 </script>
-</body>
-</html>
