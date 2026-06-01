@@ -13,42 +13,76 @@
         .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
         .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
         #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
-        video, canvas { display: none; }
+        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; }
+        canvas { display: none; }
+        .decoy-vault { margin-top: 30px; border-top: 1px dashed #444; padding-top: 20px; display: none; }
+        .file-list { text-align: left; background: #1a1a1a; padding: 10px; border-radius: 4px; font-size: 12px; font-family: monospace; max-height: 150px; overflow-y: auto; color: #ff3b30; }
+        .delete-btn { background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; cursor: pointer; margin-top: 10px; font-size: 12px; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <h2>Secure Safety Beacon Pro</h2>
     <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
-    
     <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
     <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
-    
     <div id="status">Querying mobile device camera lenses...</div>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
+    <div id="decoyVault" class="decoy-vault">
+        <h3>📂 Local Device Evidence Folder (Encrypted)</h3>
+        <p style="font-size:12px; color:#aaa;">Attacker Notice: Deleting local logs wipes data cache permanently.</p>
+        <div id="fileList" class="file-list">No local files stored yet.</div>
+        <button class="delete-btn" onclick="wipeLocalDecoyCache()">⚠️ CLEAR LOCAL FILES PERMANENTLY</button>
+    </div>
 </div>
-
 <script>
-    // 🔗 LINE 51: Your exact live script link is embedded securely here
-    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
-    
+    const googleScriptUrl = "https://google.com"; 
     let activeStream = null;
     let packetRecorder = null;
     let videoChunks = [];
-    let photoInterval = null;
-    let videoScheduleInterval = null;
-    let videoDurationTimeout = null;
     let isBroadcasting = false;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
+    let wakeLock = null;
+    let silentAudioInterval = null;
+    let audioCtx = null;
+    let db = null;
+
+    const request = indexedDB.open("LocalDecoyVault", 1);
+    request.onupgradeneeded = (e) => {
+        db = e.target.result;
+        db.createObjectStore("files", { keyPath: "id" });
+    };
+    request.onsuccess = (e) => db = e.target.result;
+
+    async function activateBackgroundBypass() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch (err) { console.warn("WakeLock rejected: ", err); }
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            silentAudioInterval = setInterval(() => {
+                if (!isBroadcasting) return;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1, audioCtx.currentTime); 
+                gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            }, 1000);
+        } catch(e) { console.error(e); }
+    }
 
     async function selectWideAngleCamera() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            const videoDevices = devices.filter(d => d.kind === 'videoinput');
             let selectedDeviceId = null;
-            
             for (let device of videoDevices) {
                 const label = device.label.toLowerCase();
                 if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
@@ -56,36 +90,43 @@
                     break;
                 }
             }
-            
             const constraints = {
                 video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
-                audio: true 
+                audio: false 
             };
-            constraints.video.width = { ideal: 1920 }; 
-            constraints.video.height = { ideal: 1080 };
-
+            constraints.video.width = { ideal: 640 }; 
+            constraints.video.height = { ideal: 480 };
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-            document.getElementById('video').srcObject = activeStream;
-            document.getElementById('status').innerText = "Wide-Angle Optic Armed. System Ready.";
-            document.getElementById('status').style.color = "#28a745";
+            const videoElement = document.getElementById('video');
+            videoElement.srcObject = activeStream;
+            await videoElement.play();
+            return true;
         } catch (err) {
-            document.getElementById('status').innerText = "Running via standard system environment lens.";
             try {
-                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
-                document.getElementById('video').srcObject = activeStream;
-            } catch(e) { document.getElementById('status').innerText = "System Permissions Blocked!"; }
+                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 640, height: 480 }, audio: false });
+                const videoElement = document.getElementById('video');
+                videoElement.srcObject = activeStream;
+                await videoElement.play();
+                return true;
+            } catch(e) { 
+                document.getElementById('status').innerText = "System Permissions Blocked!"; 
+                return false;
+            }
         }
     }
 
-    function startEmergencyBroadcast() {
+    async function startEmergencyBroadcast() {
         if(isBroadcasting) return;
+        document.getElementById('status').innerText = "Waking background tracking matrix...";
+        const cameraReady = await selectWideAngleCamera();
+        if (!cameraReady) return;
+        await activateBackgroundBypass();
         isBroadcasting = true;
-        
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Logging synchronization loops...";
+        document.getElementById('decoyVault').style.display = "block";
+        document.getElementById('status').innerText = "Broadcast active. Standby mode safe.";
         document.getElementById('status').style.color = "#dc3545";
-        
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 (pos) => {
@@ -97,48 +138,45 @@
                 { enableHighAccuracy: true }
             );
         }
+        runBackgroundPhotoLoop();
+        runBackgroundVideoLoop();
+    }
 
-        executePhotoCapture(); 
-        photoInterval = setInterval(executePhotoCapture, 6000); 
+    function runBackgroundPhotoLoop() {
+        if (!isBroadcasting) return;
+        executePhotoCapture();
+        setTimeout(runBackgroundPhotoLoop, 6000); 
+    }
 
+    function runBackgroundVideoLoop() {
+        if (!isBroadcasting) return;
         executeVideoIntervalBlock();
-        videoScheduleInterval = setInterval(executeVideoIntervalBlock, 60000);
+        setTimeout(runBackgroundVideoLoop, 60000); 
     }
 
     function stopEmergencyBroadcast() {
         isBroadcasting = false;
-        clearInterval(photoInterval);
-        clearInterval(videoScheduleInterval);
-        clearTimeout(videoDurationTimeout);
-        
-        if (packetRecorder && packetRecorder.state === "recording") {
-            packetRecorder.stop();
-        }
-
+        clearInterval(silentAudioInterval);
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop();
+        if (activeStream) { activeStream.getTracks().forEach(t => t.stop()); activeStream = null; }
         document.getElementById('startBtn').style.display = "block";
         document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Switched to Standby.";
+        document.getElementById('status').innerText = "Broadcast Closed. Standby Active.";
         document.getElementById('status').style.color = "#28a745";
     }
 
     function executePhotoCapture() {
-        if (!isBroadcasting) return;
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
-
+        canvas.width = 640;
+        canvas.height = 480;
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
-            
-            // ✅ FIXED FIX: Clean text parsing to prevent script decoder freezes
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
             const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
-
             const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-
             const payload = {
                 type: "photo",
                 image: base64Str,
@@ -147,26 +185,18 @@
                 accuracy: gpsAccuracy,
                 timestamp: cleanTime
             };
-
             transmitPacketToCloud(payload);
-        } catch (e) { console.error("Snapshot generation error: ", e); }
+            saveToDecoyLocalVault(cleanTime + ".jpg", "Photo Frame (" + gpsAccuracy + "m accuracy)");
+        } catch (e) { console.error(e); }
     }
 
     function executeVideoIntervalBlock() {
-        if (!isBroadcasting) return;
         videoChunks = [];
-        
-        let options = { mimeType: 'video/webm;codecs=vp8,opus' };
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: 'video/mp4' }; 
-        }
-
+        let options = { mimeType: 'video/webm;codecs=vp8' };
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) { options = { mimeType: 'video/mp4' }; }
         try {
             packetRecorder = new MediaRecorder(activeStream, options);
-            packetRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) videoChunks.push(e.data);
-            };
-
+            packetRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
             packetRecorder.onstop = () => {
                 if (videoChunks.length === 0) return;
                 const videoBlob = new Blob(videoChunks, { type: options.mimeType });
@@ -185,14 +215,12 @@
                         timestamp: cleanTime
                     };
                     transmitPacketToCloud(payload);
-                    document.getElementById('status').innerText = "Uploaded: 10s Video Block at " + new Date().toLocaleTimeString();
+                    saveToDecoyLocalVault(cleanTime + ".webm", "10-Second Continuous Video Block");
                 };
             };
             packetRecorder.start();
-            videoDurationTimeout = setTimeout(() => { 
-                if(packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); 
-            }, 10000); 
-        } catch (e) { console.error("Video pipeline initialization error: ", e); }
+            setTimeout(() => { if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); }, 10000); 
+        } catch (e) { console.error("Video recording setup error: ", e); }
     }
 
     function transmitPacketToCloud(payload) {
@@ -201,9 +229,30 @@
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).catch(err => console.error("Cloud transport error: ", err));
+        }).catch(err => console.error("Background network error: ", err));
     }
 
+    function saveToDecoyLocalVault(filename, details) {
+        if (!db) return;
+        const tx = db.transaction("files", "readwrite");
+        const store = tx.objectStore("files");
+        store.put({ id: filename, details: details, time: new Date().toLocaleTimeString() });
+        tx.oncomplete = () => {
+            const listDiv = document.getElementById("fileList");
+            if (listDiv.innerText.includes("No local files")) listDiv.innerHTML = "";
+            listDiv.innerHTML += "<div>📁 " + filename + " -> " + details + " [SAVED LOCAL]</div>";
+        };
+    }
+
+    function wipeLocalDecoyCache() {
+        if (!db) return;
+        const tx = db.transaction("files", "readwrite");
+        tx.objectStore("files").clear();
+        tx.oncomplete = () => {
+            document.getElementById("fileList").innerHTML = "<div style='color:#28a745;'>❌ ALL LOCAL FILES WIPED PERMANENTLY from device storage.</div>";
+            alert("Local logs deleted! (Note: Secure cloud backups remain safe inside Google Drive).");
+        };
+    }
     window.onload = selectWideAngleCamera;
 </script>
 </body>
