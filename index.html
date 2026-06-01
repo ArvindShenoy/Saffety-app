@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Times of Asia</title>
+    <title>SOS Safety Beacon Pro</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0d0d0d; color: #f5f5f5; text-align: center; margin: 0; padding: 20px; }
         .box { max-width: 380px; margin: 0 auto; background: #141414; padding: 25px 20px; border-radius: 16px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
         h2 { font-size: 22px; font-weight: 600; margin: 0 0 5px 0; letter-spacing: -0.5px; }
         .subtitle { font-size: 12px; color: #777; margin: 0 0 25px 0; }
-        
-        /* 🔴 PREMIUM TACTILE 3D ROUND BUTTON STYLE */
         .round-3d-btn {
             background: linear-gradient(135deg, #e63946 0%, #b22222 100%);
             border: 4px solid #fff;
@@ -24,21 +22,18 @@
             cursor: pointer;
             display: block;
             outline: none;
-            /* Creates the physical 3D unpressed depth pop */
-            box-shadow: 0 15px 0 #7f1d1d, 0 20px 25px rgba(0, 0, 0, 0.6), inset 0 4px 4px rgba(255, 255, 255, 0.3);
-            transition: all 0.1s ease;
+            box-shadow: 0 12px 0 #7f1d1d, 0 15px 20px rgba(0, 0, 0, 0.6), inset 0 4px 4px rgba(255, 255, 255, 0.3);
+            transition: all 0.05s ease;
             position: relative;
             top: 0;
+            -webkit-tap-highlight-color: transparent;
         }
-        
-        /* ⏹️ TACTILE ACTIVE PRESSED-DOWN LAYOUT */
         .round-3d-btn.active-press {
             background: linear-gradient(135deg, #1d3557 0%, #132239 100%);
-            box-shadow: 0 4px 0 #0b1523, 0 6px 10px rgba(0, 0, 0, 0.5), inset 0 4px 8px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 2px 0 #0b1523, 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 4px 8px rgba(0, 0, 0, 0.6);
             border-color: #a8dadc;
-            top: 11px; /* Physically shifts down to look flattened into the console */
+            top: 10px;
         }
-
         #status { margin-top: 30px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
         #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
         canvas { display: none; }
@@ -57,10 +52,7 @@
 <div class="box">
     <h2>Safety Beacon Pro</h2>
     <div class="subtitle">Tactile Dual-Vector Sync Engine</div>
-    
-    <!-- Single Smart Toggle Button Layout -->
     <button id="sosBtn" class="round-3d-btn" onclick="toggleEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
-    
     <div id="status">System armed and ready for tactical deployment...</div>
     <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
     <div id="decoyVault" class="vault">
@@ -104,7 +96,7 @@
             if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
             return true;
         } catch (err) {
-            document.getElementById('status').innerText = "Hardware Blocked! Grant Camera & Microphone rights.";
+            document.getElementById('status').innerText = "Hardware Blocked! Grant rights.";
             return false;
         }
     }
@@ -123,10 +115,15 @@
     }
 
     async function startEmit() {
-        if (!(await selectHardwareStreams())) { toggleEmergencyBroadcast(); return; }
+        if (!(await selectHardwareStreams())) { 
+            const btn = document.getElementById('sosBtn');
+            btn.classList.remove('active-press');
+            btn.innerHTML = "🚨 INITIATE<br>BROADCAST";
+            return; 
+        }
         isBroadcasting = true;
         document.getElementById('decoyVault').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Logging environmental logs safely...";
+        document.getElementById('status').innerText = "Broadcast active. Syncing streams...";
         document.getElementById('status').style.color = "#e63946";
         
         if (navigator.geolocation) {
@@ -142,11 +139,7 @@
     }
 
     function runBackgroundPhotoLoop() { if (!isBroadcasting) return; executePhotoCapture(); setTimeout(runBackgroundPhotoLoop, 6000); }
-    
-    // Loops continuous 1-minute standalone forensic sound tracks
     function runContinuousAudioLoop() { if (!isBroadcasting) return; executeContinuousAudioBlock(); setTimeout(runContinuousAudioLoop, 60000); }
-    
-    // Loops standalone combined 10-second AV tracks once every minute
     function runCombinedVideoLoop() { if (!isBroadcasting) return; executeCombinedVideoBlock(); setTimeout(runCombinedVideoLoop, 60000); }
 
     function stopEmit() {
@@ -172,12 +165,10 @@
         } catch (e) {}
     }
 
-    // Pipeline 1: Records combined 10-second Video with Live Microphone sound attached
     function executeCombinedVideoBlock() {
         videoChunks = [];
         let vOpt = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/mp4' };
         try {
-            // Mixes your wide camera stream and microphone stream together into one hardware track
             let mixedStream = new MediaStream([...activeStream.getVideoTracks(), ...audioStream.getAudioTracks()]);
             combinedRecorder = new MediaRecorder(mixedStream, vOpt);
             combinedRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
@@ -192,11 +183,10 @@
                 };
             };
             combinedRecorder.start();
-            setTimeout(() => { if(combinedRecorder.state === "recording") combinedRecorder.stop(); }, 10000);
+            setTimeout(() => { if(combinedRecorder && combinedRecorder.state === "recording") combinedRecorder.stop(); }, 10000);
         } catch (e) {}
     }
 
-    // Pipeline 2: Records full 60-second continuous audio blocks to prevent background browser sleep blocks
     function executeContinuousAudioBlock() {
         fullAudioChunks = [];
         let aOpt = { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' };
@@ -209,13 +199,12 @@
                 const reader = new FileReader(); reader.readAsDataURL(audioBlob);
                 reader.onloadend = () => {
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    // Uploads sound data block to server matching the expected "video" parameter handling mapping lines
                     transmitPacketToCloud({ type: "video", videoData: reader.result.substring(reader.result.indexOf(',') + 1), latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: cleanTime + "_FullMinuteAUDIO" });
-                    saveToDecoyLocalVault("Audio_" + cleanTime + ".mp3", "Continuous 1-Minute Forensic Audio Track Captured");
+                    saveToDecoyLocalVault("Audio_" + cleanTime + ".mp3", "Continuous 1-Min Audio Track Captured");
                 };
             };
             continuousAudioRecorder.start();
-            setTimeout(() => { if(continuousAudioRecorder.state === "recording") continuousAudioRecorder.stop(); }, 59500); // Clips just short of 1 minute to transition streams seamlessly
+            setTimeout(() => { if(continuousAudioRecorder && continuousAudioRecorder.state === "recording") continuousAudioRecorder.stop(); }, 59500); 
         } catch (e) {}
     }
 
@@ -244,3 +233,11 @@
     function viewLocal() {
         if (!db) return;
         db.transaction("files", "readonly").objectStore("files").getAll().onsuccess = (e) => {
+            let el = document.getElementById("dbDump");
+            el.style.display = el.style.display === "block" ? "none" : "block";
+            el.innerText = "=== CACHE RECORD MATRIX ===\n" + JSON.stringify(e.target.result, null, 2);
+        };
+    }
+</script>
+</body>
+</html>
