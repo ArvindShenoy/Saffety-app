@@ -51,7 +51,7 @@
 </head>
 <body>
 <div class="box">
-    <h2>Safety Beacon Pro</h2>
+    <h2>Times of Asia</h2>
     <div class="subtitle">Tactile Dual-Vector Sync Engine</div>
     <button id="sosBtn" class="round-3d-btn" onclick="toggleEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
     <div id="status">System armed and ready for tactical deployment...</div>
@@ -67,8 +67,7 @@
     </div>
 </div>
 <script>
-    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec" + 
-        "AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
+    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
     let activeStream = null, audioStream = null, combinedRecorder = null, continuousAudioRecorder = null;
     let videoChunks = [], fullAudioChunks = [], isBroadcasting = false, db = null, wakeLock = null;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
@@ -125,7 +124,7 @@
         }
         isBroadcasting = true;
         document.getElementById('decoyVault').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Syncing streams...";
+        document.getElementById('status').innerText = "Broadcast active. Syncing streams... Display safe to lock.";
         document.getElementById('status').style.color = "#e63946";
         
         if (navigator.geolocation) {
@@ -170,7 +169,8 @@
                 accuracy: gpsAccuracy, 
                 timestamp: cleanTime 
             });
-            saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "Lt[" + currentLat + "] Lg[" + currentLon + "] ac[" + gpsAccuracy + "m]");
+            // 🔄 FIXED DISPLAY KEYS: Replaced Lt and Lg with the requested LAT and LON parameters
+            saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "LAT[" + currentLat + "] LON[" + currentLon + "] ac[" + gpsAccuracy + "m]");
         } catch (e) {}
     }
 
