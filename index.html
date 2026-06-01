@@ -5,74 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SOS Advanced Safety Beacon</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 15px; margin: 0; overflow-x: hidden; }
-        .container { width: 100%; max-width: 400px; margin: 0 auto; padding: 0 10px; }
-        .square-btn { border: 4px solid #fff; font-size: 1.25rem; font-weight: bold; cursor: pointer; width: 65vw; height: 65vw; max-width: 220px; max-height: 220px; margin: 30px auto; color: white; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: background-color 0.2s, transform 0.1s; }
+        body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 20px; margin: 0; }
+        .container { max-width: 400px; margin: 0 auto; }
+        .square-btn { border: 4px solid #fff; border-radius: 0px !important; font-size: 20px; font-weight: bold; cursor: pointer; width: 220px; height: 220px; margin: 40px auto; color: white; display: block; transition: background-color 0.2s, transform 0.1s; }
         .btn-start { background-color: #dc3545; box-shadow: 0 0 20px rgba(220, 53, 69, 0.5); }
         .btn-start:active { transform: scale(0.97); background-color: #bd2130; }
         .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
         .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
-        #status { margin-top: 20px; font-size: 0.95rem; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; word-wrap: break-word; }
-        #telemetry { font-size: 0.8rem; color: #aaa; margin-top: 10px; font-family: monospace; }
-        #previewVid { width: 100%; max-width: 180px; height: auto; border: 1px dashed #444; margin-top: 10px; display: inline-block; background: #000; }
+        #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
+        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; }
+        canvas { display: none; }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>Secure Safety Beacon Pro</h2>
-    <p>Schedule: Photos (6s loop) & Audio-Video (15s block)</p>
-    <video id="previewVid" autoplay playsinline muted></video>
-    <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
+    <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
+    <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
     <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
-    <div id="status">System Armed. Awaiting button click...</div>
-    <div id="telemetry">GPS Data: Awaiting initialization...</div>
-    <canvas id="canvas" style="display:none;"></canvas>
+    <div id="status">System Armed. Awaiting square button click...</div>
+    <video id="video" autoplay loop muted playsinline webkit-playsinline></video>
+    <canvas id="canvas"></canvas>
 </div>
 <script>
     const googleScriptUrl = "https://google.com"; 
-    let activeStream = null, packetRecorder = null, videoChunks = [], photoInterval = null, videoScheduleInterval = null, videoDurationTimeout = null, isBroadcasting = false;
+    let activeStream = null;
+    let packetRecorder = null;
+    let videoChunks = [];
+    let photoInterval = null;
+    let videoScheduleInterval = null;
+    let videoDurationTimeout = null;
+    let isBroadcasting = false;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
     async function selectWideAngleCamera() {
         try {
-            const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            initialStream.getTracks().forEach(track => track.stop());
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             let selectedDeviceId = null;
             for (let device of videoDevices) {
                 const label = device.label.toLowerCase();
-                if (label.includes('ultra') || label.includes('wide') || label.includes('back 0') || label.includes('0.5x') || label.includes('external')) {
-                    selectedDeviceId = device.deviceId; break;
+                if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
+                    selectedDeviceId = device.deviceId;
+                    break;
                 }
             }
-            const constraints = { audio: true, video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" } };
-            if (!selectedDeviceId) { constraints.video.width = { ideal: 640 }; constraints.video.height = { ideal: 480 }; }
+            const constraints = {
+                video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
+                audio: false 
+            };
+            constraints.video.width = { ideal: 1280 }; 
+            constraints.video.height = { ideal: 720 };
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-            const previewEl = document.getElementById('previewVid');
-            previewEl.srcObject = activeStream; await previewEl.play(); return true;
+            const videoElement = document.getElementById('video');
+            videoElement.srcObject = activeStream;
+            await videoElement.play(); 
+            return true;
         } catch (err) {
-            document.getElementById('status').innerText = "Camera/Mic Blocked! Ensure HTTPS link."; return false;
+            try {
+                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                const videoElement = document.getElementById('video');
+                videoElement.srcObject = activeStream;
+                await videoElement.play();
+                return true;
+            } catch(e) { 
+                document.getElementById('status').innerText = "Optical Permissions Missing! Check phone browser privacy parameters.";
+                return false;
+            }
         }
     }
 
     async function startEmergencyBroadcast() {
         if(isBroadcasting) return;
-        if (!await selectWideAngleCamera()) return; 
+        const statusElement = document.getElementById('status');
+        statusElement.innerText = "Syncing network channels and optical targets...";
+        statusElement.style.color = "#ffc107";
+        const cameraReady = await selectWideAngleCamera();
+        if (!cameraReady) return; 
         isBroadcasting = true;
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active...";
+        statusElement.innerText = "Broadcast active. Logging synchronization loops...";
+        statusElement.style.color = "#dc3545";
         if (navigator.geolocation) {
-            navigator.geolocation.watchPosition((pos) => {
-                currentLat = pos.coords.latitude.toFixed(5);
-                currentLon = pos.coords.longitude.toFixed(5);
-                gpsAccuracy = Math.round(pos.coords.accuracy);
-                document.getElementById('telemetry').innerText = `GPS Live: Lat[${currentLat}] Lon[${currentLon}] Acc[${gpsAccuracy}m]`;
-            }, (err) => {
-                document.getElementById('telemetry').innerText = `GPS Sensor Blocked: ${err.message}`;
-            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    currentLat = pos.coords.latitude.toFixed(5);
+                    currentLon = pos.coords.longitude.toFixed(5);
+                    gpsAccuracy = Math.round(pos.coords.accuracy);
+                }, 
+                null, 
+                { enableHighAccuracy: true }
+            );
         }
         executePhotoCapture(); 
         photoInterval = setInterval(executePhotoCapture, 6000); 
@@ -81,72 +105,94 @@
     }
 
     function stopEmergencyBroadcast() {
-        isBroadcasting = false; clearInterval(photoInterval); clearInterval(videoScheduleInterval); clearTimeout(videoDurationTimeout);
-        if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop();
-        if (activeStream) activeStream.getTracks().forEach(track => track.stop());
+        isBroadcasting = false;
+        clearInterval(photoInterval);
+        clearInterval(videoScheduleInterval);
+        clearTimeout(videoDurationTimeout);
+        if (packetRecorder && packetRecorder.state === "recording") {
+            packetRecorder.stop();
+        }
+        if (activeStream) {
+            activeStream.getTracks().forEach(track => track.stop());
+        }
         document.getElementById('startBtn').style.display = "block";
         document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('status').innerText = "System Standby.";
+        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Switched to Standby.";
+        document.getElementById('status').style.color = "#28a745";
     }
 
     function executePhotoCapture() {
         if (!isBroadcasting) return;
-        const video = document.getElementById('previewVid'), canvas = document.getElementById('canvas');
-        if(video.videoWidth === 0) return;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-        setTimeout(() => {
-            try {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.50); 
-                transmitPacketToCloud({
-                    type: "photo", image: dataUrl.substring(dataUrl.indexOf(',') + 1),
-                    latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
-                });
-            } catch (e) { console.error(e); }
-        }, 200);
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+            const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
+            const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+            const payload = {
+                type: "photo",
+                image: base64Str,
+                latitude: currentLat,
+                longitude: currentLon,
+                accuracy: gpsAccuracy,
+                timestamp: cleanTime
+            };
+            transmitPacketToCloud(payload);
+            document.getElementById('status').innerText = "Uploaded: Photo [6s loop] at " + new Date().toLocaleTimeString();
+        } catch (e) { console.error("Snapshot generation error: ", e); }
     }
 
     function executeVideoIntervalBlock() {
         if (!isBroadcasting) return;
         videoChunks = [];
-        let chosenMime = 'video/webm;codecs=vp8,opus';
-        if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
-        if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = 'video/webm';
-        if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = 'video/mp4';
-        if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = '';
+        let options = { mimeType: 'video/webm;codecs=vp8' }; 
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: 'video/mp4' }; 
+        }
         try {
-            packetRecorder = new MediaRecorder(activeStream, chosenMime ? { mimeType: chosenMime } : {});
-            packetRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
+            packetRecorder = new MediaRecorder(activeStream, options);
+            packetRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) videoChunks.push(e.data);
+            };
             packetRecorder.onstop = () => {
                 if (videoChunks.length === 0) return;
-                const actualMime = packetRecorder.mimeType || 'video/mp4';
+                const videoBlob = new Blob(videoChunks, { type: options.mimeType });
                 const reader = new FileReader();
-                reader.readAsDataURL(new Blob(videoChunks, { type: actualMime }));
+                reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
                     const rawResult = reader.result;
-                    transmitPacketToCloud({
-                        type: "video", videoData: rawResult.substring(rawResult.indexOf(',') + 1), mimeType: actualMime,
-                        latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
-                    });
+                    const base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
+                    const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+                    const payload = {
+                        type: "video",
+                        videoData: base64Video,
+                        latitude: currentLat,
+                        longitude: currentLon,
+                        accuracy: gpsAccuracy,
+                        timestamp: cleanTime
+                    };
+                    transmitPacketToCloud(payload);
+                    document.getElementById('status').innerText = "Uploaded: 10s Video Block at " + new Date().toLocaleTimeString();
                 };
             };
             packetRecorder.start();
-            videoDurationTimeout = setTimeout(() => { if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); }, 15000);
-        } catch (e) { console.error(e); }
+            videoDurationTimeout = setTimeout(() => { 
+                if(packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); 
+            }, 10000); 
+        } catch (e) { console.error("Video pipeline initialization error: ", e); }
     }
 
     function transmitPacketToCloud(payload) {
-        fetch(googleScriptUrl, { method: "POST", mode: "cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(payload) })
-        .then(res => res.json())
-        .then(resData => {
-            if(resData.status === "success") {
-                document.getElementById('status').innerText = `Synced ${payload.type.toUpperCase()} to Drive at ${new Date().toLocaleTimeString()}`;
-            } else {
-                document.getElementById('status').innerText = `Server error: ${resData.error || 'Check Drive setup'}`;
-            }
-        })
-        .catch(err => { document.getElementById('status').innerText = `Packet sent. Syncing streams...`; });
+        fetch(googleScriptUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).catch(err => console.error("Cloud transport error: ", err));
     }
 </script>
 </body>
