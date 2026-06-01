@@ -3,32 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOS Advanced Safety Beacon</title>
+    <title>SOS FailSafe Safety Beacon</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 20px; margin: 0; }
         .container { max-width: 400px; margin: 0 auto; }
-        .square-btn { border: 4px solid #fff; border-radius: 0px !important; font-size: 20px; font-weight: bold; cursor: pointer; width: 220px; height: 220px; margin: 40px auto; color: white; display: block; transition: background-color 0.2s, transform 0.1s; }
+        .square-btn { border: 4px solid #fff; border-radius: 0px !important; font-size: 20px; font-weight: bold; cursor: pointer; width: 220px; height: 220px; margin: 40px auto; color: white; display: block; }
         .btn-start { background-color: #dc3545; box-shadow: 0 0 20px rgba(220, 53, 69, 0.5); }
-        .btn-start:active { transform: scale(0.97); background-color: #bd2130; }
         .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
-        .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
         #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
-        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; top: 0; left: 0; }
+        #video { width: 160px; height: 120px; background: #000; margin: 10px auto; display: block; border: 1px solid #333; }
         canvas { display: none; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>Secure Safety Beacon Pro</h2>
-    <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
-    <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
-    <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
-    <div id="status">System Armed. Awaiting square button click...</div>
+    <h2>Failsafe Safety Beacon</h2>
+    <p>Pulsing Loop Tracking Interface Enabled</p>
+    
     <video id="video" autoplay loop muted playsinline webkit-playsinline></video>
+    
+    <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
+    <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
+    <div id="status">System Mounted & Armed. Tap Square Trigger...</div>
     <canvas id="canvas"></canvas>
 </div>
 <script>
-    const googleScriptUrl = "https://google.com"; 
+    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
     let activeStream = null;
     let packetRecorder = null;
     let videoChunks = [];
@@ -38,55 +38,37 @@
     let isBroadcasting = false;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
-    async function selectWideAngleCamera() {
+    async function initFailsafeCamera() {
+        if (activeStream) return true;
         try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            let selectedDeviceId = null;
-            for (let device of videoDevices) {
-                const label = device.label.toLowerCase();
-                if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
-                    selectedDeviceId = device.deviceId;
-                    break;
-                }
-            }
             const constraints = {
-                video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
-                audio: false 
+                video: { facingMode: "environment" },
+                audio: false
             };
-            constraints.video.width = { ideal: 1280 }; 
-            constraints.video.height = { ideal: 720 };
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
             const videoElement = document.getElementById('video');
             videoElement.srcObject = activeStream;
-            await videoElement.play(); 
+            await videoElement.play();
             return true;
         } catch (err) {
-            try {
-                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-                const videoElement = document.getElementById('video');
-                videoElement.srcObject = activeStream;
-                await videoElement.play();
-                return true;
-            } catch(e) { 
-                document.getElementById('status').innerText = "Optical Permissions Missing! Check phone browser privacy parameters.";
-                return false;
-            }
+            document.getElementById('status').innerText = "Hardware Error: " + err.name;
+            return false;
         }
     }
 
     async function startEmergencyBroadcast() {
         if(isBroadcasting) return;
-        const statusElement = document.getElementById('status');
-        statusElement.innerText = "Syncing network channels and optical targets...";
-        statusElement.style.color = "#ffc107";
-        const cameraReady = await selectWideAngleCamera();
-        if (!cameraReady) return; 
+        document.getElementById('status').innerText = "Waking optical sensors...";
+        
+        const cameraReady = await initFailsafeCamera();
+        if (!cameraReady) return;
+
         isBroadcasting = true;
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
-        statusElement.innerText = "Broadcast active. Logging synchronization loops...";
-        statusElement.style.color = "#dc3545";
+        document.getElementById('status').innerText = "Broadcast Active. Running data transmission...";
+        document.getElementById('status').style.color = "#dc3545";
+
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 (pos) => {
@@ -98,8 +80,10 @@
                 { enableHighAccuracy: true }
             );
         }
+
         executePhotoCapture(); 
         photoInterval = setInterval(executePhotoCapture, 6000); 
+
         executeVideoIntervalBlock();
         videoScheduleInterval = setInterval(executeVideoIntervalBlock, 60000); 
     }
@@ -114,10 +98,11 @@
         }
         if (activeStream) {
             activeStream.getTracks().forEach(track => track.stop());
+            activeStream = null;
         }
         document.getElementById('startBtn').style.display = "block";
         document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Switched to Standby.";
+        document.getElementById('status').innerText = "Broadcast Terminated. Standby.";
         document.getElementById('status').style.color = "#28a745";
     }
 
@@ -126,11 +111,13 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
+        
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8); 
             const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
             const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
             const payload = {
@@ -142,14 +129,15 @@
                 timestamp: cleanTime
             };
             transmitPacketToCloud(payload);
-            document.getElementById('status').innerText = "Uploaded: Photo [6s loop] at " + new Date().toLocaleTimeString();
-        } catch (e) { console.error("Snapshot generation error: ", e); }
+            document.getElementById('status').innerText = "Uploaded: Photo Loop at " + new Date().toLocaleTimeString();
+        } catch (e) { console.error(e); }
     }
 
     function executeVideoIntervalBlock() {
         if (!isBroadcasting) return;
         videoChunks = [];
-        let options = { mimeType: 'video/webm;codecs=vp8' }; 
+        
+        let options = { mimeType: 'video/webm;codecs=vp8' };
         if (!MediaRecorder.isTypeSupported(options.mimeType)) {
             options = { mimeType: 'video/mp4' }; 
         }
@@ -176,14 +164,14 @@
                         timestamp: cleanTime
                     };
                     transmitPacketToCloud(payload);
-                    document.getElementById('status').innerText = "Uploaded: 10s Video Block at " + new Date().toLocaleTimeString();
+                    document.getElementById('status').innerText = "Uploaded: Video Packet at " + new Date().toLocaleTimeString();
                 };
             };
             packetRecorder.start();
             videoDurationTimeout = setTimeout(() => { 
                 if(packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); 
             }, 10000); 
-        } catch (e) { console.error("Video pipeline initialization error: ", e); }
+        } catch (e) { console.error(e); }
     }
 
     function transmitPacketToCloud(payload) {
@@ -192,7 +180,7 @@
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        }).catch(err => console.error("Cloud transport error: ", err));
+        }).catch(err => console.error(err));
     }
 </script>
 </body>
