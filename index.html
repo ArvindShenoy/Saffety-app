@@ -14,46 +14,51 @@
         .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
         .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
         #status { margin-top: 20px; font-size: 0.95rem; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; word-wrap: break-word; }
-        video, canvas { display: none; }
+        #telemetry { font-size: 0.8rem; color: #aaa; margin-top: 10px; font-family: monospace; }
+        #previewVid { width: 100%; max-width: 200px; height: auto; border: 1px dashed #444; margin-top: 10px; display: inline-block; background: #000; }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>Secure Safety Beacon Pro</h2>
     <p>Schedule: 10 Photos/Min & 1 Video/Min</p>
+    
+    <!-- Visual feed block to force the mobile OS hardware camera to stay awake -->
+    <video id="previewVid" autoplay playsinline muted></video>
+    
     <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
     <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
+    
     <div id="status">System Armed. Awaiting button click...</div>
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
+    <div id="telemetry">GPS Data: Awaiting initialization...</div>
+    <canvas id="canvas" style="display:none;"></canvas>
 </div>
 <script>
-    const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
+    const googleScriptUrl = "https://google.com"; 
     let activeStream = null, packetRecorder = null, videoChunks = [], photoInterval = null, videoScheduleInterval = null, videoDurationTimeout = null, isBroadcasting = false;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
     async function selectWideAngleCamera() {
         try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            let selectedDeviceId = null;
-            for (let device of videoDevices) {
-                const label = device.label.toLowerCase();
-                if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
-                    selectedDeviceId = device.deviceId; break;
-                }
-            }
-            const constraints = { video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" }, audio: false };
-            constraints.video.width = { ideal: 1280 }; constraints.video.height = { ideal: 720 };
+            // Force mobile configuration with strict environment back-facing lens targeting
+            const constraints = { 
+                video: { 
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }, 
+                audio: false 
+            };
             activeStream = await navigator.mediaDevices.getUserMedia(constraints);
-            document.getElementById('video').srcObject = activeStream; return true;
+            
+            // Wire the data feed directly to the visible preview tag to keep hardware pipeline warm
+            const previewEl = document.getElementById('previewVid');
+            previewEl.srcObject = activeStream;
+            await previewEl.play();
+            return true;
         } catch (err) {
-            try {
-                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-                document.getElementById('video').srcObject = activeStream; return true;
-            } catch(e) { 
-                document.getElementById('status').innerText = "Camera Access Blocked!"; return false;
-            }
+            document.getElementById('status').innerText = "Camera Access Blocked! Open in Safari/Chrome.";
+            return false;
         }
     }
 
@@ -64,13 +69,18 @@
         document.getElementById('startBtn').style.display = "none";
         document.getElementById('stopBtn').style.display = "block";
         document.getElementById('status').innerText = "Broadcast active...";
+        
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition((pos) => {
                 currentLat = pos.coords.latitude.toFixed(5);
                 currentLon = pos.coords.longitude.toFixed(5);
                 gpsAccuracy = Math.round(pos.coords.accuracy);
-            }, null, { enableHighAccuracy: true, timeout: 5000 });
+                document.getElementById('telemetry').innerText = `GPS Live: Lat[${currentLat}] Lon[${currentLon}] Acc[${gpsAccuracy}m]`;
+            }, (err) => {
+                document.getElementById('telemetry').innerText = `GPS Sensor Blocked: ${err.message}`;
+            }, { enableHighAccuracy: true, timeout: 10000 });
         }
+        
         executePhotoCapture(); 
         photoInterval = setInterval(executePhotoCapture, 6000); 
         executeVideoIntervalBlock();
@@ -88,11 +98,14 @@
 
     function executePhotoCapture() {
         if (!isBroadcasting) return;
-        const video = document.getElementById('video'), canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
-        canvas.width = video.videoWidth || 1280; canvas.height = video.videoHeight || 720;
+        const video = document.getElementById('previewVid'), canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        if(video.videoWidth === 0) return; // Keep rendering warm loops until active frames initialize
+        
+        canvas.width = video.videoWidth; 
+        canvas.height = video.videoHeight;
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.80); 
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.70); 
             transmitPacketToCloud({
                 type: "photo", image: dataUrl.substring(dataUrl.indexOf(',') + 1),
                 latitude: currentLat, longitude: currentLon, accuracy: gpsAccuracy, timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-')
@@ -103,15 +116,19 @@
     function executeVideoIntervalBlock() {
         if (!isBroadcasting) return;
         videoChunks = [];
-        let chosenMime = 'video/webm;codecs=vp8';
+        
+        // Strict system check for cross-platform containers (mp4 for iOS fallback, webm for Android)
+        let chosenMime = 'video/mp4';
+        if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = 'video/webm;codecs=vp8';
         if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = 'video/webm';
-        if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = 'video/mp4';
+        if (!MediaRecorder.isTypeSupported(chosenMime)) chosenMime = '';
+
         try {
             packetRecorder = new MediaRecorder(activeStream, chosenMime ? { mimeType: chosenMime } : {});
             packetRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
             packetRecorder.onstop = () => {
                 if (videoChunks.length === 0) return;
-                const actualMime = packetRecorder.mimeType || 'video/webm';
+                const actualMime = packetRecorder.mimeType || 'video/mp4';
                 const reader = new FileReader();
                 reader.readAsDataURL(new Blob(videoChunks, { type: actualMime }));
                 reader.onloadend = () => {
@@ -123,6 +140,7 @@
                 };
             };
             packetRecorder.start();
+            // Automatically records a clean 10-second snippet block as requested
             videoDurationTimeout = setTimeout(() => { if (packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); }, 10000);
         } catch (e) { console.error(e); }
     }
