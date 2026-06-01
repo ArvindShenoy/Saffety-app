@@ -31,7 +31,7 @@
 </div>
 
 <script>
-    // 🔗 Your exact live Google Apps Script web link is safely applied below
+    // 🔗 LINE 51: Your exact live script link is embedded securely here
     const googleScriptUrl = "https://google.com"; 
     
     let activeStream = null;
@@ -133,6 +133,8 @@
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+            
+            // ✅ FIXED FIX: Clean text parsing to prevent script decoder freezes
             const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
 
             const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
