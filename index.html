@@ -3,208 +3,272 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOS Advanced Safety Beacon</title>
+    <title>SOS Safety Beacon Pro</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #111; color: #fff; text-align: center; padding: 20px; margin: 0; }
-        .container { max-width: 400px; margin: 0 auto; }
-        .square-btn { border: 4px solid #fff; border-radius: 0px !important; font-size: 20px; font-weight: bold; cursor: pointer; width: 220px; height: 220px; margin: 40px auto; color: white; display: block; transition: background-color 0.2s, transform 0.1s; }
-        .btn-start { background-color: #dc3545; box-shadow: 0 0 20px rgba(220, 53, 69, 0.5); }
-        .btn-start:active { transform: scale(0.97); background-color: #bd2130; }
-        .btn-stop { background-color: #007bff; box-shadow: 0 0 20px rgba(0, 123, 255, 0.5); display: none; }
-        .btn-stop:active { transform: scale(0.97); background-color: #0056b3; }
-        #status { margin-top: 20px; font-size: 15px; color: #ffc107; font-weight: bold; background: #222; padding: 12px; border-radius: 5px; border: 1px solid #333; }
-        video, canvas { display: none; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #0d0d0d; color: #f5f5f5; text-align: center; margin: 0; padding: 20px; }
+        .box { max-width: 380px; margin: 0 auto; background: #141414; padding: 25px 20px; border-radius: 16px; border: 1px solid #222; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
+        h2 { font-size: 22px; font-weight: 600; margin: 0 0 5px 0; letter-spacing: -0.5px; }
+        .subtitle { font-size: 12px; color: #777; margin: 0 0 25px 0; }
+        
+        /* 🔴 SEAMLESS 3D ROUND BUTTON WITH SHADOW RECENT DEPTH */
+        .round-3d-btn {
+            background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%);
+            border: none !important; /* No border rings */
+            border-radius: 50% !important; /* Perfectly round circle */
+            width: 190px;
+            height: 190px;
+            margin: 30px auto;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            display: block;
+            outline: none;
+            /* Inset and dark outer shadows simulate a single deep wall recess */
+            box-shadow: 0 12px 0 #3a0000, 0 20px 30px rgba(0, 0, 0, 0.9), inset 0 4px 6px rgba(255, 255, 255, 0.1), inset 0 -8px 16px rgba(0, 0, 0, 0.6);
+            transition: all 0.05s ease;
+            position: relative;
+            top: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .round-3d-btn.active-press {
+            background: linear-gradient(135deg, #132239 0%, #0b1523 100%);
+            box-shadow: 0 2px 0 #050b12, 0 6px 12px rgba(0, 0, 0, 0.8), inset 0 6px 12px rgba(0, 0, 0, 0.9);
+            top: 10px; /* Shifts physical alignment downward */
+        }
+        
+        #status { margin-top: 30px; font-size: 13px; color: #f1faee; background: #1d1d1d; padding: 12px; border-radius: 8px; border: 1px solid #2a2a2a; }
+        #video { width: 1px; height: 1px; opacity: 0.01; position: absolute; }
+        canvas { display: none; }
+        .vault { margin-top: 30px; border-top: 1px dashed #2b2b2b; padding-top: 20px; display: none; }
+        h4 { font-size: 13px; color: #999; margin: 0 0 10px 0; text-align: left; font-weight: 500; }
+        .f-list { text-align: left; background: #0a0a0a; padding: 12px; border-radius: 6px; font-size: 11px; max-height: 110px; overflow-y: auto; color: #a8dadc; font-family: monospace; border: 1px solid #1a1a1a; }
+        .ctrl-panel { margin-top: 15px; text-align: right; }
+        .v-btn { background: transparent; color: #555; border: none; padding: 4px 8px; cursor: pointer; font-size: 11px; transition: color 0.2s; }
+        .v-btn:hover { color: #888; }
+        .db-btn { color: #2a7b4c; }
+        .db-btn:hover { color: #3aa667; }
+        #dbDump { background: #050505; color: #39ff14; padding: 10px; text-align: left; font-size: 10px; font-family: monospace; white-space: pre-wrap; display: none; border: 1px solid #222; border-radius: 6px; margin-top: 10px; max-height: 120px; overflow-y: auto; }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <h2>Secure Safety Beacon Pro</h2>
-    <p>Schedule: 10 Photos/Min (6s loop) & 1 Video/Min (10s block)</p>
-    
-    <button id="startBtn" class="square-btn btn-start" onclick="startEmergencyBroadcast()">🚨 INITIATE<br>SQUARE BROADCAST</button>
-    <button id="stopBtn" class="square-btn btn-stop" onclick="stopEmergencyBroadcast()">⏹️ STOP<br>BROADCAST</button>
-    
-    <div id="status">Querying mobile device camera lenses...</div>
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas"></canvas>
+<div class="box">
+    <h2>Safety Beacon Pro</h2>
+    <div class="subtitle">Tactile Dual-Vector Sync Engine [M1]</div>
+    <button id="sosBtn" class="round-3d-btn" onclick="toggleEmergencyBroadcast()">🚨 INITIATE<br>BROADCAST</button>
+    <div id="status">System armed and ready for tactical deployment...</div>
+    <video id="video" autoplay playsinline muted></video><canvas id="canvas"></canvas>
+    <div id="decoyVault" class="vault">
+        <h4>📂 Storage Sandbox</h4>
+        <div id="fileList" class="f-list">No local entries tracked yet.</div>
+        <div class="ctrl-panel">
+            <button class="v-btn db-btn" onclick="viewLocal()">inspect data rows</button>
+            <button class="v-btn" onclick="wipeLocal()">clear cache</button>
+        </div>
+        <div id="dbDump"></div>
+    </div>
 </div>
-
 <script>
-    // 🔗 LINE 51: Your exact live script link is embedded securely here
     const googleScriptUrl = "https://script.google.com/macros/s/AKfycbzhkaLbAkNRPfGVNykf_srPuNO_-mcHcJ_Lk5ekGJN42s9UtTXqbUFBECVyCAXqv6oN/exec"; 
-    
-    let activeStream = null;
-    let packetRecorder = null;
-    let videoChunks = [];
-    let photoInterval = null;
-    let videoScheduleInterval = null;
-    let videoDurationTimeout = null;
-    let isBroadcasting = false;
+    let activeStream = null, audioStream = null, combinedRecorder = null, continuousAudioRecorder = null;
+    let videoChunks = [], fullAudioChunks = [], isBroadcasting = false, db = null, wakeLock = null;
     let currentLat = "Unknown", currentLon = "Unknown", gpsAccuracy = "0";
 
-    async function selectWideAngleCamera() {
+    const request = indexedDB.open("LocalDecoyVault", 1);
+    request.onupgradeneeded = (e) => e.target.result.createObjectStore("files", { keyPath: "id" });
+    request.onsuccess = (e) => db = e.target.result;
+
+    async function selectHardwareStreams() {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            const videoDevices = devices.filter(d => d.kind === 'videoinput');
             let selectedDeviceId = null;
-            
-            for (let device of videoDevices) {
+            for (let device of videoDevices)  {
                 const label = device.label.toLowerCase();
                 if (label.includes('wide') || label.includes('ultra') || label.includes('back 1') || label.includes('0.5x')) {
                     selectedDeviceId = device.deviceId;
                     break;
                 }
             }
-            
-            const constraints = {
+            activeStream = await navigator.mediaDevices.getUserMedia({
                 video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : { facingMode: "environment" },
-                audio: true 
-            };
-            constraints.video.width = { ideal: 1920 }; 
-            constraints.video.height = { ideal: 1080 };
-
-            activeStream = await navigator.mediaDevices.getUserMedia(constraints);
+                audio: false
+            });
             document.getElementById('video').srcObject = activeStream;
-            document.getElementById('status').innerText = "Wide-Angle Optic Armed. System Ready.";
-            document.getElementById('status').style.color = "#28a745";
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+            return true;
         } catch (err) {
-            document.getElementById('status').innerText = "Running via standard system environment lens.";
-            try {
-                activeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: true });
-                document.getElementById('video').srcObject = activeStream;
-            } catch(e) { document.getElementById('status').innerText = "System Permissions Blocked!"; }
+            document.getElementById('status').innerText = "Hardware Blocked! Grant rights.";
+            return false;
         }
     }
 
-    function startEmergencyBroadcast() {
-        if(isBroadcasting) return;
+    function toggleEmergencyBroadcast() {
+        const btn = document.getElementById('sosBtn');
+        if (!isBroadcasting) {
+            btn.classList.add('active-press');
+            btn.innerHTML = "⏹️ STOP<br>BROADCAST";
+            startEmit();
+        } else {
+            btn.classList.remove('active-press');
+            btn.innerHTML = "🚨 INITIATE<br>BROADCAST";
+            stopEmit();
+        }
+    }
+
+    async function startEmit() {
+        if (!(await selectHardwareStreams())) { 
+            const btn = document.getElementById('sosBtn');
+            btn.classList.remove('active-press');
+            btn.innerHTML = "🚨 INITIATE<br>BROADCAST";
+            return; 
+        }
         isBroadcasting = true;
-        
-        document.getElementById('startBtn').style.display = "none";
-        document.getElementById('stopBtn').style.display = "block";
-        document.getElementById('status').innerText = "Broadcast active. Logging synchronization loops...";
-        document.getElementById('status').style.color = "#dc3545";
+        document.getElementById('decoyVault').style.display = "block";
+        document.getElementById('status').innerText = "Broadcast active. Syncing telemetry...";
+        document.getElementById('status').style.color = "#e63946";
         
         if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
-                (pos) => {
-                    currentLat = pos.coords.latitude.toFixed(5);
-                    currentLon = pos.coords.longitude.toFixed(5);
-                    gpsAccuracy = Math.round(pos.coords.accuracy);
-                }, 
-                null, 
-                { enableHighAccuracy: true }
-            );
+            navigator.geolocation.watchPosition((pos) => {
+                currentLat = pos.coords.latitude.toFixed(5);
+                currentLon = pos.coords.longitude.toFixed(5);
+                gpsAccuracy = Math.round(pos.coords.accuracy);
+            }, null, { enableHighAccuracy: true });
         }
-
-        executePhotoCapture(); 
-        photoInterval = setInterval(executePhotoCapture, 6000); 
-
-        executeVideoIntervalBlock();
-        videoScheduleInterval = setInterval(executeVideoIntervalBlock, 60000);
+        runBackgroundPhotoLoop();
+        runContinuousAudioLoop(); 
+        runCombinedVideoLoop(); 
     }
+    function runBackgroundPhotoLoop() { if (!isBroadcasting) return; executePhotoCapture(); setTimeout(runBackgroundPhotoLoop, 6000); }
+    function runContinuousAudioLoop() { if (!isBroadcasting) return; executeContinuousAudioBlock(); setTimeout(runContinuousAudioLoop, 60000); }
+    function runCombinedVideoLoop() { if (!isBroadcasting) return; executeCombinedVideoBlock(); setTimeout(runCombinedVideoLoop, 60000); }
 
-    function stopEmergencyBroadcast() {
-        isBroadcasting = false;
-        clearInterval(photoInterval);
-        clearInterval(videoScheduleInterval);
-        clearTimeout(videoDurationTimeout);
-        
-        if (packetRecorder && packetRecorder.state === "recording") {
-            packetRecorder.stop();
-        }
-
-        document.getElementById('startBtn').style.display = "block";
-        document.getElementById('stopBtn').style.display = "none";
-        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Switched to Standby.";
+    function stopEmit() {
+        isBroadcasting = false; if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        if (combinedRecorder && combinedRecorder.state === "recording") combinedRecorder.stop();
+        if (continuousAudioRecorder && continuousAudioRecorder.state === "recording") continuousAudioRecorder.stop();
+        if (activeStream) activeStream.getTracks().forEach(t => t.stop());
+        if (audioStream) audioStream.getTracks().forEach(t => t.stop());
+        document.getElementById('status').innerText = "Broadcast Closed. Monitoring Idle.";
         document.getElementById('status').style.color = "#28a745";
     }
 
     function executePhotoCapture() {
-        if (!isBroadcasting) return;
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = video.videoWidth || 1280;
-        canvas.height = video.videoHeight || 720;
-
+        const video = document.getElementById('video'), canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+        canvas.width = 640; canvas.height = 480;
         try {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85); 
+            ctx.drawImage(video, 0, 0, 640, 480);
+            let dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
+            let base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
+            let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
             
-            // ✅ FIXED FIX: Clean text parsing to prevent script decoder freezes
-            const base64Str = dataUrl.substring(dataUrl.indexOf(',') + 1); 
-
-            const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-
-            const payload = {
-                type: "photo",
-                image: base64Str,
-                latitude: currentLat,
-                longitude: currentLon,
-                accuracy: gpsAccuracy,
-                timestamp: cleanTime
-            };
-
-            transmitPacketToCloud(payload);
-        } catch (e) { console.error("Snapshot generation error: ", e); }
+            transmitPacketToCloud({ 
+                type: "photo", 
+                image: base64Str, 
+                latitude: currentLat, 
+                longitude: currentLon, 
+                accuracy: gpsAccuracy, 
+                timestamp: cleanTime 
+            });
+            saveToDecoyLocalVault("Photo_" + cleanTime + ".jpg", "Lat[" + currentLat + "] Lon[" + currentLon + "] Acc[" + gpsAccuracy + "m]");
+        } catch (e) {}
     }
 
-    function executeVideoIntervalBlock() {
-        if (!isBroadcasting) return;
+    function executeCombinedVideoBlock() {
         videoChunks = [];
-        
-        let options = { mimeType: 'video/webm;codecs=vp8,opus' };
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: 'video/mp4' }; 
-        }
-
+        let vOpt = { mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp8') ? 'video/webm;codecs=vp8' : 'video/mp4' };
         try {
-            packetRecorder = new MediaRecorder(activeStream, options);
-            packetRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) videoChunks.push(e.data);
-            };
-
-            packetRecorder.onstop = () => {
+            let mixedStream = new MediaStream([...activeStream.getVideoTracks(), ...audioStream.getAudioTracks()]);
+            combinedRecorder = new MediaRecorder(mixedStream, vOpt);
+            combinedRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) videoChunks.push(e.data); };
+            combinedRecorder.onstop = () => {
                 if (videoChunks.length === 0) return;
-                const videoBlob = new Blob(videoChunks, { type: options.mimeType });
-                const reader = new FileReader();
-                reader.readAsDataURL(videoBlob);
+                const videoBlob = new Blob(videoChunks, { type: vOpt.mimeType });
+                const reader = new FileReader(); reader.readAsDataURL(videoBlob);
                 reader.onloadend = () => {
                     const rawResult = reader.result;
-                    const base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
-                    const cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
-                    const payload = {
-                        type: "video",
-                        videoData: base64Video,
-                        latitude: currentLat,
-                        longitude: currentLon,
-                        accuracy: gpsAccuracy,
-                        timestamp: cleanTime
-                    };
-                    transmitPacketToCloud(payload);
-                    document.getElementById('status').innerText = "Uploaded: 10s Video Block at " + new Date().toLocaleTimeString();
+                    let base64Video = rawResult.substring(rawResult.indexOf(',') + 1); 
+                    let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+                    
+                    transmitPacketToCloud({ 
+                        type: "video", 
+                        videoData: base64Video, 
+                        latitude: currentLat, 
+                        longitude: currentLon, 
+                        accuracy: gpsAccuracy, 
+                        timestamp: cleanTime 
+                    });
+                    saveToDecoyLocalVault("Vid_" + cleanTime + ".mp4", "10s Combined AV Video Captured");
                 };
             };
-            packetRecorder.start();
-            videoDurationTimeout = setTimeout(() => { 
-                if(packetRecorder && packetRecorder.state === "recording") packetRecorder.stop(); 
-            }, 10000); 
-        } catch (e) { console.error("Video pipeline initialization error: ", e); }
+            combinedRecorder.start();
+            setTimeout(() => { if(combinedRecorder && combinedRecorder.state === "recording") combinedRecorder.stop(); }, 10000);
+        } catch (e) {}
+    }
+
+    function executeContinuousAudioBlock() {
+        fullAudioChunks = [];
+        let aOpt = { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' };
+        try {
+            continuousAudioRecorder = new MediaRecorder(audioStream, aOpt);
+            continuousAudioRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) fullAudioChunks.push(e.data); };
+            continuousAudioRecorder.onstop = () => {
+                if (fullAudioChunks.length === 0) return;
+                const audioBlob = new Blob(fullAudioChunks, { type: aOpt.mimeType });
+                const reader = new FileReader(); reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const rawResult = reader.result;
+                    let base64Audio = rawResult.substring(rawResult.indexOf(',') + 1); 
+                    let cleanTime = new Date().toLocaleTimeString('en-US', { hour12: false }).replace(/:/g, '-');
+                    
+                    transmitPacketToCloud({ 
+                        type: "video", 
+                        videoData: base64Audio, 
+                        latitude: currentLat, 
+                        longitude: currentLon, 
+                        accuracy: gpsAccuracy, 
+                        timestamp: cleanTime + "_FullMinuteAUDIO" 
+                    });
+                    saveToDecoyLocalVault("Audio_" + cleanTime + ".mp3", "Continuous 1-Min Audio Track Captured");
+                };
+            };
+            continuousAudioRecorder.start();
+            setTimeout(() => { if(continuousAudioRecorder && continuousAudioRecorder.state === "recording") continuousAudioRecorder.stop(); }, 59500); 
+        } catch (e) {}
     }
 
     function transmitPacketToCloud(payload) {
-        fetch(googleScriptUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).catch(err => console.error("Cloud transport error: ", err));
+        fetch(googleScriptUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(e=>{});
     }
 
-    window.onload = selectWideAngleCamera;
+    function saveToDecoyLocalVault(filename, details) {
+        if (!db) return;
+        const tx = db.transaction("files", "readwrite");
+        tx.objectStore("files").put({ id: filename, details: details, time: new Date().toLocaleTimeString() });
+        tx.oncomplete = () => {
+            let div = document.getElementById("fileList"); if (div.innerText.includes("No local")) div.innerHTML = "";
+            div.innerHTML += "<div>📄 " + filename + " -> " + details + "</div>";
+        };
+    }
+
+    function wipeLocal() {
+        if (!db) return;
+        db.transaction("files", "readwrite").objectStore("files").clear().oncomplete = () => {
+            document.getElementById("fileList").innerHTML = "<div>Cache data wiped clean.</div>";
+            document.getElementById("dbDump").style.display = "none";
+        };
+    }
+
+    function viewLocal() {
+        if (!db) return;
+        db.transaction("files", "readonly").objectStore("files").getAll().onsuccess = (e) => {
+            let el = document.getElementById("dbDump");
+            el.style.display = el.style.display === "block" ? "none" : "block";
+            el.innerText = "=== CACHE RECORD MATRIX ===\n" + JSON.stringify(e.target.result, null, 2);
+        };
+    }
 </script>
 </body>
 </html>
